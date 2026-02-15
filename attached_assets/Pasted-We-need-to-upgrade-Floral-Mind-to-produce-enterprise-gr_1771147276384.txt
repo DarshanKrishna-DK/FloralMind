@@ -1,0 +1,95 @@
+We need to upgrade Floral Mind to produce enterprise-grade dashboards similar in professionalism to Power BI and Tableau, while keeping our AI-native core intact.
+
+IMPORTANT:
+This is NOT a manual dashboard builder.
+Floral Mind remains AI-first.
+The AI generates dashboards intelligently based on user configuration.
+
+Do NOT break existing Supabase integration or AI query system.
+Enhance modularly.
+
+----------------------------------------------------
+PHASE 1 – Dashboard Configuration Layer
+----------------------------------------------------
+
+Before generating any dashboard, introduce a pre-generation configuration step.
+
+Create a "Dashboard Setup Panel" with the following options:
+
+1. Number of charts:
+   - 4 charts
+   - 6 charts
+   - 8 charts
+   - Custom number
+
+2. Layout style:
+   - Executive (large KPI cards + 2 big charts + 2 medium charts)
+   - Analytical (balanced grid layout)
+   - Detailed (multi-row compact grid)
+   - Wide focus (1 large hero chart + supporting charts)
+
+3. Chart density:
+   - Minimal (clean)
+   - Balanced
+   - Data-heavy
+
+4. Chart style:
+   - 2D professional
+   - Subtle 3D depth
+   - Flat minimal
+
+5. Theme:
+   - Floral Light (default)
+   - Executive Dark (optional future)
+
+The user selects configuration → then AI generates dashboard blueprint.
+
+----------------------------------------------------
+PHASE 2 – AI Dashboard Blueprint System
+----------------------------------------------------
+
+Instead of directly rendering charts, implement a Dashboard Blueprint Generator.
+
+Claude must return structured JSON:
+
+{
+  "dashboard_title": "",
+  "layout_type": "",
+  "charts": [
+    {
+      "chart_id": "",
+      "chart_type": "",
+      "title": "",
+      "sql_query": "",
+      "grid_position": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "insight_summary": ""
+    }
+  ]
+}
+
+The backend:
+- Executes SQL queries
+- Validates results
+- Feeds data to frontend
+- Applies grid positioning
+
+----------------------------------------------------
+PHASE 3 – Professional Layout Engine
+----------------------------------------------------
+
+Replace fixed grid with:
+
+react-grid-layout
+
+Requirements:
+- Drag and drop
+- Resizable widgets
+- Grid snapping
+- Multiple row heights
+- Independent chart sizing
+- Save layout in state
+
+Charts must NOT auto-expand full width.
+They must respect grid dimensions.
+
+-----------------------------------

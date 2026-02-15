@@ -1,0 +1,81 @@
+We need to upgrade Floral Mind to a production-level analytics platform.
+
+Major Enhancements Required:
+
+1. Voice Interaction
+- Add microphone button in chat panel
+- Use browser Web Speech API for speech-to-text
+- Send transcript to backend
+- Use browser SpeechSynthesis for voice playback of AI response
+- Add toggle to mute/unmute voice
+- Ensure voice does not autoplay if muted
+
+2. AI Accuracy Measurement
+- Track SQL execution success rate
+- Log failed queries
+- Add confidence scoring system:
+  - After generating insight, run internal validation prompt
+  - Return confidence score 1–5
+- Display small badge:
+  "AI Confidence: 4.3/5"
+
+3. Advanced Dashboard Layout System
+Replace current fixed grid layout.
+
+Use:
+- react-grid-layout (drag and resize enabled)
+
+Requirements:
+- User can drag charts
+- User can resize charts
+- Charts snap to grid
+- Different row heights
+- Save layout in state
+
+Add layout presets:
+- Executive (2 large + 2 small)
+- Detailed (4 equal grid)
+- Wide mode (1 large full width + 2 half)
+
+4. User Customization Controls
+Add dashboard settings panel:
+- Select number of charts per row
+- Toggle 2D / 3D charts
+- Change chart density
+- Reset layout button
+
+5. 3D Charts Support
+Replace Recharts with Apache ECharts or Plotly.
+
+Requirements:
+- Support 3D bar charts
+- Support 3D pie charts
+- Keep design elegant, not flashy
+- Maintain Floral pink theme colors
+
+6. Chart Rendering Fix
+Current issue:
+Charts are taking full width and layout not working.
+
+Fix:
+- Wrap charts in grid item container
+- Remove width: 100% override
+- Use responsive container properly
+- Constrain width and height via grid layout
+
+7. Preserve AI Drilldown Logic
+Ensure click events still:
+- Trigger new Claude query
+- Update chart dynamically
+- Add new chart to grid
+
+8. Maintain Performance
+- Lazy load charts
+- Avoid full re-render of dashboard on each update
+- Use memoization where needed
+
+Do not rewrite entire app.
+Refactor modularly.
+
+Implement changes step by step.
+Ask for confirmation after each major feature.
