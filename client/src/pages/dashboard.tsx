@@ -46,7 +46,7 @@ import { ChatPanel } from "@/components/chat-panel";
 import { ManualChartBuilder } from "@/components/manual-chart-builder";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { Dataset, Message, ChartConfig, DashboardMetric, AIResponse, ColumnInfo } from "@shared/schema";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ResponsiveGridLayout as RGLBase } from "react-grid-layout";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -970,10 +970,10 @@ export default function DashboardPage() {
 
           <main className="flex-1 flex flex-col sm:flex-row overflow-hidden" ref={mainAreaRef}>
             <div
-              className={`flex-1 min-w-0 overflow-y-auto overflow-x-hidden flex flex-col h-full bg-background/50`}
+              className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden flex flex-col h-full"
               ref={dashboardRef}
             >
-              <div className="w-full max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8">
+              <div className="w-full p-4 sm:p-5 lg:p-6">
                 {dashLoading && initialMode === "auto" ? (
                 <div className="p-4 space-y-4">
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1136,30 +1136,54 @@ export default function DashboardPage() {
                   )}
                 </>
               )}
+              </div>
             </div>
 
+            <AnimatePresence>
+              {chatOpen && (
+                <motion.div
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 400, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="flex-shrink-0 h-full overflow-hidden hidden sm:block"
+                >
+                  <ChatPanel
+                    datasetId={datasetId}
+                    messages={chatMessages}
+                    confidenceScores={confidenceScores}
+                    onSendMessage={handleSendMessage}
+                    onSliceClick={handleSliceClick}
+                    onAddChartToDashboard={handleAddChartFromChat}
+                    isLoading={isAiLoading}
+                    suggestions={suggestions}
+                    pinnedChart={pinnedChart}
+                    onClearPinnedChart={() => setPinnedChart(null)}
+                    chatOpen={chatOpen}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {chatOpen && (
-              <motion.div
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: "auto", opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="flex-shrink-0 h-full border-l bg-background/95 backdrop-blur-md"
-              >
-                <ChatPanel
-                  datasetId={datasetId}
-                  messages={chatMessages}
-                  confidenceScores={confidenceScores}
-                  onSendMessage={handleSendMessage}
-                  onSliceClick={handleSliceClick}
-                  onAddChartToDashboard={handleAddChartFromChat}
-                  isLoading={isAiLoading}
-                  suggestions={suggestions}
-                  pinnedChart={pinnedChart}
-                  onClearPinnedChart={() => setPinnedChart(null)}
-                  chatOpen={chatOpen}
-                />
-              </motion.div>
+              <div className="fixed inset-0 z-[90] sm:hidden">
+                <div className="absolute inset-0 bg-black/50" onClick={() => setChatOpen(false)} />
+                <div className="absolute inset-y-0 right-0 w-full max-w-[400px] bg-background shadow-2xl">
+                  <ChatPanel
+                    datasetId={datasetId}
+                    messages={chatMessages}
+                    confidenceScores={confidenceScores}
+                    onSendMessage={handleSendMessage}
+                    onSliceClick={handleSliceClick}
+                    onAddChartToDashboard={handleAddChartFromChat}
+                    isLoading={isAiLoading}
+                    suggestions={suggestions}
+                    pinnedChart={pinnedChart}
+                    onClearPinnedChart={() => setPinnedChart(null)}
+                    chatOpen={chatOpen}
+                  />
+                </div>
+              </div>
             )}
           </main>
         </div>
