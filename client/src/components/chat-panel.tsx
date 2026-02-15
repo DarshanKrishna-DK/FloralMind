@@ -151,7 +151,7 @@ export function ChatPanel({
   const activeSuggestions = suggestions.length > 0 ? suggestions : (messages.length === 0 ? defaultSuggestions : []);
 
   return (
-    <div className="flex flex-col h-full w-full sm:w-[400px] min-w-0 overflow-hidden bg-background">
+    <div className="flex flex-col h-full w-full min-w-0 overflow-hidden bg-background">
       <div className="px-4 py-3 border-b flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -190,7 +190,7 @@ export function ChatPanel({
       )}
 
       <ScrollArea className="flex-1 min-h-0" ref={scrollRef as any}>
-        <div className="px-4 py-4 space-y-4">
+        <div className="px-4 py-4 space-y-4 overflow-hidden">
           {messages.length === 0 && !isLoading && (
             <div className="text-center py-8">
               <div className="w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center mx-auto mb-3">
@@ -221,13 +221,13 @@ export function ChatPanel({
                   data-testid={`message-${msg.role}-${msg.id}`}
                 >
                   <div
-                    className={`rounded-md px-3 py-2 text-sm leading-relaxed break-words ${
+                    className={`rounded-md px-3 py-2 text-sm leading-relaxed break-words overflow-hidden ${
                       msg.role === "user"
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted"
                     }`}
                   >
-                    {msg.content}
+                    <span className="break-words whitespace-pre-wrap" style={{ overflowWrap: "anywhere" }}>{msg.content}</span>
                     {msg.role === "assistant" && confidenceScores[msg.id] && (
                       <div className="mt-2 flex items-center gap-1.5">
                         <Badge variant="secondary" className="text-[10px] gap-1">
@@ -239,7 +239,7 @@ export function ChatPanel({
                   </div>
 
                   {msg.chartData && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 overflow-hidden max-w-full">
                       <ChartCard
                         chart={msg.chartData as ChartConfig}
                         onSliceClick={onSliceClick}

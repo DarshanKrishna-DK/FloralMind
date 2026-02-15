@@ -298,6 +298,15 @@ export default function DashboardPage() {
     return () => ro.disconnect();
   }, []);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (gridContainerRef.current) {
+        setGridWidth(gridContainerRef.current.clientWidth);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [chatOpen]);
+
   const [availableHeight, setAvailableHeight] = useState(() =>
     typeof window !== "undefined" ? window.innerHeight : 800
   );
@@ -1036,7 +1045,7 @@ export default function DashboardPage() {
                   <div className="w-full" ref={gridContainerRef}>
                     {dashboardCharts.length > 0 ? (
                       <ResponsiveGridLayout
-                        key={`${selectedLayout}-${dashboardCharts.length}`}
+                        key={`${selectedLayout}-${dashboardCharts.length}-${Math.round(gridWidth / 50)}`}
                         className="layout"
                         layouts={currentLayouts}
                         breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
@@ -1161,7 +1170,12 @@ export default function DashboardPage() {
                   animate={{ width: 400, opacity: 1 }}
                   exit={{ width: 0, opacity: 0 }}
                   transition={{ duration: 0.2, ease: "easeInOut" }}
-                  className="flex-shrink-0 h-full overflow-hidden hidden sm:block"
+                  onAnimationComplete={() => {
+                    if (gridContainerRef.current) {
+                      setGridWidth(gridContainerRef.current.clientWidth);
+                    }
+                  }}
+                  className="flex-shrink-0 h-full overflow-hidden hidden sm:flex border-l"
                 >
                   <ChatPanel
                     datasetId={datasetId}
