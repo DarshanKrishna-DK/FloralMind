@@ -110,6 +110,43 @@ Return ONLY valid JSON, no markdown or explanation.`;
   }
 }
 
+export async function generateReport(
+  tableName: string,
+  columns: ColumnInfo[],
+  rowCount: number,
+  metrics: DashboardMetric[],
+  chartTitles: string[]
+): Promise<string> {
+  const dataContext = buildDataContext(tableName, columns, rowCount);
+
+  const prompt = `You are a senior data analyst preparing a comprehensive report. Generate a detailed, professional dashboard report based on this dataset and the dashboard that was created from it.
+
+${dataContext}
+
+Dashboard metrics: ${JSON.stringify(metrics)}
+Charts on the dashboard: ${chartTitles.join(", ")}
+
+Write a well-structured report with:
+1. Executive Summary - Key takeaways in 2-3 sentences
+2. Dataset Overview - What the data contains, its scope and coverage
+3. Key Metrics Analysis - Analyze each metric and what it tells us
+4. Visualization Insights - What each chart reveals about the data
+5. Patterns & Trends - Important patterns discovered
+6. Recommendations - 3-5 actionable recommendations based on the data
+7. Data Quality Notes - Any observations about data completeness or quality
+
+Format the report in clean Markdown. Be specific with numbers and percentages from the actual data. Make the analysis professional and actionable.`;
+
+  const response = await anthropic.messages.create({
+    model: "claude-sonnet-4-5",
+    max_tokens: 8192,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  return text;
+}
+
 export async function handleQuery(
   tableName: string,
   columns: ColumnInfo[],

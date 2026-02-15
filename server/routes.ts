@@ -8,8 +8,8 @@ import path from "path";
 import { z } from "zod";
 import { storage } from "./storage";
 import { createTableFromCSV, detectSchema, queryDataset } from "./sqlite-manager";
-import { generateDashboard, handleQuery } from "./ai-service";
-import type { ColumnInfo } from "@shared/schema";
+import { generateDashboard, handleQuery, generateReport } from "./ai-service";
+import type { ColumnInfo, DashboardMetric } from "@shared/schema";
 
 const uploadDir = path.join(os.tmpdir(), "floralmind-uploads");
 if (!fs.existsSync(uploadDir)) {
@@ -156,6 +156,41 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("Query error:", err);
       res.status(500).json({ error: err.message || "Failed to process query" });
+    }
+  });
+
+  app.post("/api/datasets/:id/report", async (req, res) => {
+    try {
+      const dataset = await storage.getDataset(parseInt(req.params.id));
+      if (!dataset) return res.status(404).json({ error: "Dataset not found" });
+
+      const reportSchema = z.object({
+        metrics: z.array(z.object({
+          label: z.string(),
+          value: z.union([z.string(), z.number()]),
+          change: z.string().optional(),
+          icon: z.string().optional(),
+        })).optional().default([]),
+        chartTitles: z.array(z.string()).optional().default([]),
+      });
+
+      const parsed = reportSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid request" });
+      }
+
+      const report = await generateReport(
+        dataset.tableName,
+        dataset.columns as ColumnInfo[],
+        dataset.rowCount,
+        parsed.data.metrics as DashboardMetric[],
+        parsed.data.chartTitles
+      );
+
+      res.json({ report });
+    } catch (err: any) {
+      console.error("Report generation error:", err);
+      res.status(500).json({ error: err.message || "Failed to generate report" });
     }
   });
 

@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Sparkles, Loader2, Bot, User } from "lucide-react";
+import { Send, Sparkles, Loader2, Bot, User, X } from "lucide-react";
 import { ChartCard } from "@/components/chart-card";
 import type { Message, ChartConfig } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,6 +15,8 @@ interface ChatPanelProps {
   onSliceClick?: (data: Record<string, unknown>) => void;
   isLoading: boolean;
   suggestions?: string[];
+  pinnedChart?: ChartConfig | null;
+  onClearPinnedChart?: () => void;
 }
 
 export function ChatPanel({
@@ -24,10 +26,11 @@ export function ChatPanel({
   onSliceClick,
   isLoading,
   suggestions = [],
+  pinnedChart,
+  onClearPinnedChart,
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -79,6 +82,18 @@ export function ChatPanel({
         </div>
       </div>
 
+      {pinnedChart && (
+        <div className="px-3 pt-3 pb-1">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <span className="text-xs text-muted-foreground font-medium">Pinned Chart</span>
+            <Button size="icon" variant="ghost" onClick={onClearPinnedChart} data-testid="button-unpin-chart">
+              <X className="w-3 h-3" />
+            </Button>
+          </div>
+          <ChartCard chart={pinnedChart} compact showControls={false} />
+        </div>
+      )}
+
       <ScrollArea className="flex-1 px-4" ref={scrollRef as any}>
         <div className="py-4 space-y-4">
           {messages.length === 0 && !isLoading && (
@@ -107,9 +122,7 @@ export function ChatPanel({
                   </div>
                 )}
                 <div
-                  className={`max-w-[85%] space-y-2 ${
-                    msg.role === "user" ? "" : ""
-                  }`}
+                  className="max-w-[85%] space-y-2"
                   data-testid={`message-${msg.role}-${msg.id}`}
                 >
                   <div
@@ -127,6 +140,7 @@ export function ChatPanel({
                       chart={msg.chartData as ChartConfig}
                       onSliceClick={onSliceClick}
                       compact
+                      showControls={false}
                     />
                   )}
 
@@ -196,7 +210,6 @@ export function ChatPanel({
       <form onSubmit={handleSubmit} className="p-4 border-t">
         <div className="flex gap-2 items-end">
           <Textarea
-            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}

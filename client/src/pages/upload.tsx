@@ -3,10 +3,13 @@ import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileSpreadsheet, ArrowRight, Sparkles, BarChart3, MessageSquare } from "lucide-react";
+import { Upload, FileSpreadsheet, ArrowRight, ArrowLeft, Sparkles, BarChart3, MessageSquare, Wrench } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { ThemeToggle } from "@/components/theme-toggle";
 import logoWithText from "@assets/ChatGPT_Image_Feb_15,_2026,_11_16_42_AM_1771134475217.png";
+
+type DashboardMode = "auto" | "manual";
 
 export default function UploadPage() {
   const [, navigate] = useLocation();
@@ -15,6 +18,7 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [mode, setMode] = useState<DashboardMode>("auto");
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -75,7 +79,7 @@ export default function UploadPage() {
       toast({ title: "Dataset uploaded", description: `${dataset.name} is ready for analysis.` });
 
       setTimeout(() => {
-        navigate(`/dashboard/${dataset.id}`);
+        navigate(`/dashboard/${dataset.id}?mode=${mode}`);
       }, 500);
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
@@ -104,11 +108,19 @@ export default function UploadPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="flex items-center justify-between gap-4 px-6 py-4 border-b">
+      <header className="flex items-center justify-between gap-4 px-6 py-3 border-b sticky top-0 z-50 bg-background/80 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <img src={logoWithText} alt="FloralMind" className="h-8 object-contain" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/")}
+            data-testid="button-back-landing"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <img src={logoWithText} alt="FloralMind" className="h-7 object-contain" />
         </div>
-        <div className="flex items-center gap-2" />
+        <ThemeToggle />
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
@@ -132,7 +144,7 @@ export default function UploadPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="w-full max-w-lg mb-10"
+          className="w-full max-w-lg mb-6"
         >
           <Card className="p-6">
             <div
@@ -204,27 +216,79 @@ export default function UploadPage() {
               <div className="mt-4">
                 <Progress value={progress} className="h-2" />
                 <p className="text-xs text-muted-foreground mt-2 text-center">
-                  {progress < 30 ? "Uploading..." : progress < 70 ? "Analyzing schema..." : "Generating dashboard..."}
+                  {progress < 30 ? "Uploading..." : progress < 70 ? "Analyzing schema..." : "Preparing dashboard..."}
                 </p>
               </div>
             )}
-
-            <Button
-              className="w-full mt-4"
-              disabled={!file || uploading}
-              onClick={handleUpload}
-              data-testid="button-upload"
-            >
-              {uploading ? "Processing..." : "Analyze Dataset"}
-              {!uploading && <ArrowRight className="w-4 h-4 ml-2" />}
-            </Button>
           </Card>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.15 }}
+          className="w-full max-w-lg mb-6"
+        >
+          <p className="text-xs text-muted-foreground mb-3 font-medium">Choose dashboard mode</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Card
+              className={`p-4 cursor-pointer transition-all hover-elevate ${
+                mode === "auto" ? "ring-2 ring-primary" : ""
+              }`}
+              onClick={() => setMode("auto")}
+              data-testid="mode-auto"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-sm font-medium">AI Generated</span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                AI analyzes your data and creates the best charts and metrics automatically
+              </p>
+            </Card>
+            <Card
+              className={`p-4 cursor-pointer transition-all hover-elevate ${
+                mode === "manual" ? "ring-2 ring-primary" : ""
+              }`}
+              onClick={() => setMode("manual")}
+              data-testid="mode-manual"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+                  <Wrench className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-sm font-medium">Manual Build</span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Choose your own columns, chart types, and metrics. AI chat still available
+              </p>
+            </Card>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
+          className="w-full max-w-lg mb-10"
+        >
+          <Button
+            className="w-full"
+            disabled={!file || uploading}
+            onClick={handleUpload}
+            data-testid="button-upload"
+          >
+            {uploading ? "Processing..." : mode === "auto" ? "Generate AI Dashboard" : "Create Dashboard Manually"}
+            {!uploading && <ArrowRight className="w-4 h-4 ml-2" />}
+          </Button>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
           className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl w-full"
         >
           {features.map((feature, i) => (
