@@ -156,8 +156,8 @@ export default function LandingPage() {
               <span className="text-xs font-medium text-white">AI-Native Analytics Platform</span>
             </motion.div>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight mb-2 text-white uppercase">
-              FloralMind
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight mb-2 uppercase">
+              <span className="text-pink-300">FLORAL</span><span className="text-white">MIND</span>
             </h1>
             <p className="text-xl sm:text-2xl text-white/90 font-medium italic mb-6">
               Dashboards that think
