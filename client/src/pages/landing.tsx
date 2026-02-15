@@ -156,16 +156,19 @@ export default function LandingPage() {
               <span className="text-xs font-medium text-white">AI-Native Analytics Platform</span>
             </motion.div>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight mb-4 text-white">
-              Dashboards that think
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight mb-2 text-white uppercase">
+              FloralMind
             </h1>
-            <p className="text-lg sm:text-xl text-white/80 font-medium mb-6">
+            <p className="text-xl sm:text-2xl text-white/90 font-medium italic mb-6">
+              Dashboards that think
+            </p>
+            <p className="text-lg sm:text-xl text-white/70 font-medium mb-6">
               Turn raw data into living, intelligent visualizations
             </p>
 
             <p className="text-base sm:text-lg text-white/60 max-w-2xl mx-auto mb-8 leading-relaxed">
-              Upload any CSV and let AI generate interactive dashboards, uncover hidden patterns,
-              and answer your questions through natural conversation. No coding required.
+              Upload a CSV or connect your Supabase database, and let AI generate interactive dashboards,
+              uncover hidden patterns, and answer your questions through natural conversation.
             </p>
 
             <div className="flex items-center justify-center gap-3 flex-wrap">
@@ -193,19 +196,6 @@ export default function LandingPage() {
           </motion.div>
         </motion.div>
 
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[2]">
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="w-6 h-10 rounded-md border-2 border-white/30 flex items-start justify-center p-1.5"
-          >
-            <motion.div
-              animate={{ y: [0, 12, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="w-1.5 h-1.5 rounded-sm bg-white"
-            />
-          </motion.div>
-        </div>
       </section>
 
       <section id="features" className="py-24 px-6">

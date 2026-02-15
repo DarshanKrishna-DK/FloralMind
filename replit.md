@@ -63,6 +63,8 @@ FloralMind is a production-grade conversational analytics platform that transfor
 - `POST /api/datasets/:id/query` - Ask AI question about data (Zod validated)
 - `POST /api/datasets/:id/sql` - Execute raw SQL query (Zod validated, keyword blocking, LIMIT enforced)
 - `POST /api/datasets/:id/report` - Generate AI analytics report
+- `POST /api/supabase/tables` - Connect to Supabase and list accessible tables (Zod validated)
+- `POST /api/supabase/import` - Import a Supabase table as a local dataset (Zod validated)
 
 ## User Preferences
 - Theme: Light pink, cream, white with soft purple accents (floral-inspired, not literal flowers)
@@ -70,6 +72,12 @@ FloralMind is a production-grade conversational analytics platform that transfor
 - Dark mode supported via class-based toggle
 
 ## Recent Changes
+- 2026-02-15: Added Supabase database connection as data source option alongside CSV upload
+- 2026-02-15: Created supabase-service.ts for table discovery and data import via @supabase/supabase-js
+- 2026-02-15: Added API endpoints: POST /api/supabase/tables (list tables), POST /api/supabase/import (import table)
+- 2026-02-15: Updated upload page with data source selector (Upload CSV / Connect Supabase)
+- 2026-02-15: Updated landing page hero: FLORALMIND as main heading, "Dashboards that think" as tagline
+- 2026-02-15: Removed scroll indicator from landing page hero section
 - 2026-02-15: Fixed react-grid-layout type compatibility (cast as any for ResponsiveGridLayout)
 - 2026-02-15: Added drag-and-drop resizable dashboard grid via react-grid-layout (ResponsiveGridLayout)
 - 2026-02-15: Added column data preview (click column in sidebar → data table, "View Full Table" button)

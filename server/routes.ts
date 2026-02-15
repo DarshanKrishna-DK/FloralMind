@@ -9,6 +9,7 @@ import { z } from "zod";
 import { storage } from "./storage";
 import { createTableFromCSV, detectSchema, queryDataset } from "./sqlite-manager";
 import { generateDashboard, handleQuery, generateReport } from "./ai-service";
+import { discoverSupabaseTables, importSupabaseTable } from "./supabase-service";
 import type { ColumnInfo, DashboardMetric } from "@shared/schema";
 
 const uploadDir = path.join(os.tmpdir(), "floralmind-uploads");
@@ -209,6 +210,58 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("SQL execution error:", err);
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  const supabaseConnectSchema = z.object({
+    url: z.string().url("Invalid Supabase URL"),
+    key: z.string().min(10, "API key is too short"),
+  });
+
+  app.post("/api/supabase/tables", async (req, res) => {
+    try {
+      const parsed = supabaseConnectSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
+      }
+
+      const { url, key } = parsed.data;
+      const tables = await discoverSupabaseTables(url, key);
+      res.json({ tables });
+    } catch (err: any) {
+      console.error("Supabase connection error:", err);
+      res.status(500).json({ error: err.message || "Failed to connect to Supabase" });
+    }
+  });
+
+  const supabaseImportSchema = z.object({
+    url: z.string().url("Invalid Supabase URL"),
+    key: z.string().min(10, "API key is too short"),
+    tableName: z.string().min(1, "Table name is required"),
+  });
+
+  app.post("/api/supabase/import", async (req, res) => {
+    try {
+      const parsed = supabaseImportSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
+      }
+
+      const { url, key, tableName } = parsed.data;
+      const result = await importSupabaseTable(url, key, tableName);
+
+      const dataset = await storage.createDataset({
+        name: result.datasetName,
+        originalFilename: `supabase:${tableName}`,
+        tableName: result.localTableName,
+        rowCount: result.rowCount,
+        columns: result.columns,
+      });
+
+      res.json(dataset);
+    } catch (err: any) {
+      console.error("Supabase import error:", err);
+      res.status(500).json({ error: err.message || "Failed to import Supabase table" });
     }
   });
 
