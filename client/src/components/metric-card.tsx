@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Card } from "@/components/ui/card";
 import type { DashboardMetric } from "@shared/schema";
 import { TrendingUp, TrendingDown, Hash, DollarSign, Users, Package, BarChart3 } from "lucide-react";
@@ -10,7 +11,7 @@ const iconMap: Record<string, React.ReactNode> = {
   hash: <Hash className="w-4 h-4" />,
 };
 
-export function MetricCard({ metric }: { metric: DashboardMetric }) {
+export const MetricCard = memo(function MetricCard({ metric }: { metric: DashboardMetric }) {
   const icon = metric.icon ? iconMap[metric.icon] || <Hash className="w-4 h-4" /> : <Hash className="w-4 h-4" />;
   const isPositive = metric.change && !metric.change.startsWith("-");
 
@@ -39,4 +40,4 @@ export function MetricCard({ metric }: { metric: DashboardMetric }) {
       )}
     </Card>
   );
-}
+});

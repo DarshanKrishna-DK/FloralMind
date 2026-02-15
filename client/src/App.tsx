@@ -8,12 +8,14 @@ import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/landing";
 import UploadPage from "@/pages/upload";
 import DashboardPage from "@/pages/dashboard";
+import DashboardSetup from "@/pages/dashboard-setup";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/upload" component={UploadPage} />
+      <Route path="/setup/:id" component={DashboardSetup} />
       <Route path="/dashboard/:id" component={DashboardPage} />
       <Route component={NotFound} />
     </Switch>

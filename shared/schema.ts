@@ -81,4 +81,5 @@ export interface AIResponse {
   suggestions?: string[];
   metrics?: DashboardMetric[];
   hypothesis?: string;
+  confidence?: number;
 }

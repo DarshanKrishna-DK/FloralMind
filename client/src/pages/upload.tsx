@@ -102,7 +102,11 @@ export default function UploadPage() {
       toast({ title: "Dataset uploaded", description: `${dataset.name} is ready for analysis.` });
 
       setTimeout(() => {
-        navigate(`/dashboard/${dataset.id}?mode=${mode}`);
+        if (mode === "auto") {
+          navigate(`/setup/${dataset.id}`);
+        } else {
+          navigate(`/dashboard/${dataset.id}?mode=manual`);
+        }
       }, 500);
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
@@ -183,7 +187,11 @@ export default function UploadPage() {
       toast({ title: "Table imported", description: `"${selectedTable}" is ready for analysis.` });
 
       setTimeout(() => {
-        navigate(`/dashboard/${dataset.id}?mode=${mode}`);
+        if (mode === "auto") {
+          navigate(`/setup/${dataset.id}`);
+        } else {
+          navigate(`/dashboard/${dataset.id}?mode=manual`);
+        }
       }, 500);
     } catch (err: any) {
       toast({ title: "Import failed", description: err.message, variant: "destructive" });

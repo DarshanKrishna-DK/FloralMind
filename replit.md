@@ -72,6 +72,12 @@ FloralMind is a production-grade conversational analytics platform that transfor
 - Dark mode supported via class-based toggle
 
 ## Recent Changes
+- 2026-02-15: Performance optimizations: React.memo on ChartCard, MetricCard, EChartCard; lazy-loaded ECharts
+- 2026-02-15: Added ECharts-based "Subtle 3D" chart style with gradient/shadow depth effects (echart-card.tsx)
+- 2026-02-15: AI confidence scoring: validation-based 1-5 scale displayed as Shield badges on assistant messages
+- 2026-02-15: Voice interaction: speech-to-text (Web Speech API), text-to-speech (SpeechSynthesis), mute toggle
+- 2026-02-15: AI Blueprint System: Claude returns structured JSON with grid positions for 12-column layout
+- 2026-02-15: Dashboard Setup Panel (/setup/:id): chart count, layout style, density, chart style config
 - 2026-02-15: Added layout template selector in sidebar (5 presets: 2-col, 3-col, featured, rows, mixed)
 - 2026-02-15: Dashboard fits viewport without scrolling (dynamic rowHeight, PowerBI/Tableau style)
 - 2026-02-15: Chat charts require explicit "Add to Dashboard" button (no auto-add)

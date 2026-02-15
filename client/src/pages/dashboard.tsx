@@ -40,6 +40,8 @@ import {
 } from "lucide-react";
 import { MetricCard } from "@/components/metric-card";
 import { ChartCard } from "@/components/chart-card";
+import { lazy, Suspense } from "react";
+const EChartCard = lazy(() => import("@/components/echart-card").then(m => ({ default: m.EChartCard })));
 import { ChatPanel } from "@/components/chat-panel";
 import { ManualChartBuilder } from "@/components/manual-chart-builder";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -202,6 +204,7 @@ export default function DashboardPage() {
   const initialMode = searchParams.get("mode") || "auto";
 
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
+  const [confidenceScores, setConfidenceScores] = useState<Record<number, number>>({});
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [dashboardCharts, setDashboardCharts] = useState<ChartConfig[]>([]);
   const [dashboardMetrics, setDashboardMetrics] = useState<DashboardMetric[]>([]);
@@ -222,6 +225,7 @@ export default function DashboardPage() {
   const [gridWidth, setGridWidth] = useState(800);
   const [selectedLayout, setSelectedLayout] = useState("grid-2col");
   const [metricsVisible, setMetricsVisible] = useState(true);
+  const [chartStyle, setChartStyle] = useState<string>("2d");
   const dashboardRef = useRef<HTMLDivElement>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
   const mainAreaRef = useRef<HTMLDivElement>(null);
@@ -232,10 +236,24 @@ export default function DashboardPage() {
 
   const { data: initialDashboard, isLoading: dashLoading } = useQuery<{
     metrics: DashboardMetric[];
-    charts: ChartConfig[];
+    charts: (ChartConfig & { grid_position?: { x: number; y: number; w: number; h: number } })[];
     suggestions: string[];
   }>({
-    queryKey: ["/api/datasets", datasetId, "dashboard"],
+    queryKey: ["/api/datasets", datasetId, "dashboard", searchString],
+    queryFn: async () => {
+      const configParam = searchParams.get("config");
+      let queryStr = "";
+      if (configParam) {
+        try {
+          const parsed = JSON.parse(atob(configParam));
+          queryStr = `?chartCount=${parsed.chartCount || 4}&layoutStyle=${parsed.layoutStyle || "analytical"}&chartDensity=${parsed.chartDensity || "balanced"}&chartStyle=${parsed.chartStyle || "2d"}`;
+          if (parsed.chartStyle) setChartStyle(parsed.chartStyle);
+        } catch {}
+      }
+      const res = await fetch(`/api/datasets/${datasetId}/dashboard${queryStr}`);
+      if (!res.ok) throw new Error("Failed to generate dashboard");
+      return res.json();
+    },
     enabled: !!dataset && initialMode === "auto",
   });
 
@@ -244,6 +262,20 @@ export default function DashboardPage() {
       setDashboardMetrics(initialDashboard.metrics || []);
       setDashboardCharts(initialDashboard.charts || []);
       setSuggestions(initialDashboard.suggestions || []);
+
+      const chartsWithPositions = (initialDashboard.charts || []).filter((c: any) => c.grid_position);
+      if (chartsWithPositions.length > 0) {
+        const layout = chartsWithPositions.map((c: any, i: number) => ({
+          i: String(i),
+          x: c.grid_position.x,
+          y: c.grid_position.y,
+          w: c.grid_position.w,
+          h: c.grid_position.h,
+          minW: 3,
+          minH: 3,
+        }));
+        setGridLayouts({ lg: layout, md: layout, sm: layout.map(l => ({ ...l, x: 0, w: 12 })) });
+      }
     }
   }, [initialDashboard]);
 
@@ -366,8 +398,9 @@ export default function DashboardPage() {
       const res = await apiRequest("POST", `/api/datasets/${datasetId}/query`, { question: content });
       const data: AIResponse = await res.json();
 
+      const msgId = Date.now() + 1;
       const assistantMessage: Message = {
-        id: Date.now() + 1,
+        id: msgId,
         conversationId: 0,
         role: "assistant",
         content: data.message,
@@ -376,6 +409,10 @@ export default function DashboardPage() {
         createdAt: new Date(),
       };
       setChatMessages((prev) => [...prev, assistantMessage]);
+
+      if (data.confidence) {
+        setConfidenceScores((prev) => ({ ...prev, [msgId]: data.confidence! }));
+      }
 
       if (data.suggestions) {
         setSuggestions(data.suggestions);
@@ -1028,13 +1065,25 @@ export default function DashboardPage() {
                                 </Button>
                               </div>
                               <div className="flex-1 min-h-0 overflow-hidden p-1">
-                                <ChartCard
-                                  chart={chart}
-                                  onSliceClick={handleSliceClick}
-                                  showControls={false}
-                                  noCard
-                                  fillHeight
-                                />
+                                {chartStyle === "3d" ? (
+                                  <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
+                                    <EChartCard
+                                      chart={chart}
+                                      onSliceClick={handleSliceClick}
+                                      showControls={false}
+                                      noCard
+                                      fillHeight
+                                    />
+                                  </Suspense>
+                                ) : (
+                                  <ChartCard
+                                    chart={chart}
+                                    onSliceClick={handleSliceClick}
+                                    showControls={false}
+                                    noCard
+                                    fillHeight
+                                  />
+                                )}
                               </div>
                             </Card>
                           </div>
@@ -1111,6 +1160,7 @@ export default function DashboardPage() {
                 <ChatPanel
                   datasetId={datasetId}
                   messages={chatMessages}
+                  confidenceScores={confidenceScores}
                   onSendMessage={handleSendMessage}
                   onSliceClick={handleSliceClick}
                   onAddChartToDashboard={handleAddChartFromChat}

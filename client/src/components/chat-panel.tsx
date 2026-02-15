@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Sparkles, Loader2, Bot, User, X, Plus, Check } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Send, Sparkles, Loader2, Bot, User, X, Plus, Check, Mic, MicOff, Volume2, VolumeX, Shield } from "lucide-react";
 import { ChartCard } from "@/components/chart-card";
 import type { Message, ChartConfig } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ChatPanelProps {
   datasetId: number;
   messages: Message[];
+  confidenceScores?: Record<number, number>;
   onSendMessage: (content: string) => Promise<void>;
   onSliceClick?: (data: Record<string, unknown>) => void;
   onAddChartToDashboard?: (chart: ChartConfig) => void;
@@ -23,6 +25,7 @@ interface ChatPanelProps {
 export function ChatPanel({
   datasetId,
   messages,
+  confidenceScores = {},
   onSendMessage,
   onSliceClick,
   onAddChartToDashboard,
@@ -33,7 +36,75 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const [addedChartIds, setAddedChartIds] = useState<Set<number>>(new Set());
+  const [isListening, setIsListening] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
+  const lastSpokenMsgId = useRef<number>(0);
+
+  const speakText = useCallback((text: string) => {
+    if (!voiceEnabled || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 0.8;
+    window.speechSynthesis.speak(utterance);
+  }, [voiceEnabled]);
+
+  useEffect(() => {
+    if (!voiceEnabled || messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.role === "assistant" && lastMsg.id > lastSpokenMsgId.current) {
+      lastSpokenMsgId.current = lastMsg.id;
+      speakText(lastMsg.content);
+    }
+  }, [messages, voiceEnabled, speakText]);
+
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis?.cancel();
+    };
+  }, []);
+
+  const toggleListening = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event: any) => {
+      let transcript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setInput(transcript);
+      if (event.results[event.results.length - 1].isFinal) {
+        setIsListening(false);
+      }
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  }, [isListening]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -85,10 +156,23 @@ export function ChatPanel({
           <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center">
             <Sparkles className="w-3.5 h-3.5 text-primary" />
           </div>
-          <div>
+          <div className="flex-1">
             <h3 className="text-sm font-medium">AI Analytics</h3>
             <p className="text-xs text-muted-foreground">Ask questions about your data</p>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              const newVal = !voiceEnabled;
+              setVoiceEnabled(newVal);
+              if (!newVal) window.speechSynthesis?.cancel();
+            }}
+            title={voiceEnabled ? "Mute voice responses" : "Unmute voice responses"}
+            data-testid="button-toggle-voice"
+          >
+            {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </Button>
         </div>
       </div>
 
@@ -143,6 +227,14 @@ export function ChatPanel({
                     }`}
                   >
                     {msg.content}
+                    {msg.role === "assistant" && confidenceScores[msg.id] && (
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <Badge variant="secondary" className="text-[10px] gap-1">
+                          <Shield className="w-2.5 h-2.5" />
+                          AI Confidence: {confidenceScores[msg.id]}/5
+                        </Badge>
+                      </div>
+                    )}
                   </div>
 
                   {msg.chartData && (
@@ -242,6 +334,12 @@ export function ChatPanel({
       )}
 
       <form onSubmit={handleSubmit} className="p-4 border-t">
+        {isListening && (
+          <div className="flex items-center gap-2 mb-2 px-2 py-1.5 rounded-md bg-primary/5 border border-primary/20">
+            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-xs text-primary font-medium">Listening...</span>
+          </div>
+        )}
         <div className="flex gap-2 items-end">
           <Textarea
             value={input}
@@ -253,6 +351,17 @@ export function ChatPanel({
             disabled={isLoading}
             data-testid="input-chat"
           />
+          <Button
+            type="button"
+            size="icon"
+            variant={isListening ? "default" : "ghost"}
+            onClick={toggleListening}
+            disabled={isLoading}
+            title={isListening ? "Stop listening" : "Start voice input"}
+            data-testid="button-mic"
+          >
+            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </Button>
           <Button
             type="submit"
             size="icon"

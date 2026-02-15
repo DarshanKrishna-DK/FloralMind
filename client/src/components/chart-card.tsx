@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,7 +41,7 @@ interface ChartCardProps {
   fillHeight?: boolean;
 }
 
-export function ChartCard({ chart, onSliceClick, onRemove, onChartTypeChange, onAddToDashboard, compact = false, showControls = true, noCard = false, fillHeight = false }: ChartCardProps) {
+export const ChartCard = memo(function ChartCard({ chart, onSliceClick, onRemove, onChartTypeChange, onAddToDashboard, compact = false, showControls = true, noCard = false, fillHeight = false }: ChartCardProps) {
   const [chartType, setChartType] = useState<ChartType>(chart.type as ChartType);
   const colors = chart.colors || CHART_COLORS;
   const height = fillHeight ? "100%" : compact ? 200 : 280;
@@ -249,4 +249,4 @@ export function ChartCard({ chart, onSliceClick, onRemove, onChartTypeChange, on
       {content}
     </Card>
   );
-}
+});

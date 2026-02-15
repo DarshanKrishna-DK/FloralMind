@@ -120,10 +120,22 @@ export async function registerRoutes(
       const dataset = await storage.getDataset(parseInt(req.params.id));
       if (!dataset) return res.status(404).json({ error: "Dataset not found" });
 
+      const chartCount = req.query.chartCount ? parseInt(req.query.chartCount as string) : undefined;
+      const layoutStyle = req.query.layoutStyle as string | undefined;
+      const chartDensity = req.query.chartDensity as string | undefined;
+      const chartStyle = req.query.chartStyle as string | undefined;
+
+      const config: Record<string, any> = {};
+      if (chartCount && chartCount >= 1 && chartCount <= 12) config.chartCount = chartCount;
+      if (layoutStyle && ["executive", "analytical", "detailed", "wide"].includes(layoutStyle)) config.layoutStyle = layoutStyle;
+      if (chartDensity && ["minimal", "balanced", "heavy"].includes(chartDensity)) config.chartDensity = chartDensity;
+      if (chartStyle && ["2d", "3d", "flat"].includes(chartStyle)) config.chartStyle = chartStyle;
+
       const result = await generateDashboard(
         dataset.tableName,
         dataset.columns as ColumnInfo[],
-        dataset.rowCount
+        dataset.rowCount,
+        Object.keys(config).length > 0 ? config : undefined
       );
 
       res.json(result);

@@ -41,21 +41,89 @@ function buildDataContext(
   return context;
 }
 
+export interface DashboardGenerationConfig {
+  chartCount: number;
+  layoutStyle: "executive" | "analytical" | "detailed" | "wide";
+  chartDensity: "minimal" | "balanced" | "heavy";
+  chartStyle: "2d" | "3d" | "flat";
+}
+
+const DEFAULT_CONFIG: DashboardGenerationConfig = {
+  chartCount: 4,
+  layoutStyle: "analytical",
+  chartDensity: "balanced",
+  chartStyle: "2d",
+};
+
+function getLayoutInstructions(config: DashboardGenerationConfig): string {
+  const { chartCount, layoutStyle } = config;
+  let instructions = `Generate exactly ${chartCount} charts.\n`;
+  instructions += `Each chart MUST include a "grid_position" object with {x, y, w, h} for a 12-column grid layout.\n`;
+
+  switch (layoutStyle) {
+    case "executive":
+      instructions += `Layout: Executive - Place the first 2 charts at w=6,h=5 on the top row (y=0). Place remaining charts at w=6,h=4 in rows below (y=5, y=9, etc).`;
+      break;
+    case "analytical":
+      instructions += `Layout: Analytical - Even balanced grid. All charts same size. Use w=6,h=4 for 2-column or w=4,h=4 for 3-column depending on count.`;
+      break;
+    case "detailed":
+      instructions += `Layout: Detailed - Compact rows with smaller charts. Use w=4,h=3 or w=3,h=3 packed tightly in rows.`;
+      break;
+    case "wide":
+      instructions += `Layout: Wide Focus - First chart is a large hero: w=12,h=5,x=0,y=0. All remaining charts use w=6,h=4 below it.`;
+      break;
+  }
+  return instructions;
+}
+
+function getDensityInstructions(density: DashboardGenerationConfig["chartDensity"]): string {
+  switch (density) {
+    case "minimal":
+      return "Use LIMIT 5-8 in SQL queries. Keep data clean and minimal with fewer data points/groups.";
+    case "balanced":
+      return "Use LIMIT 10-15 in SQL queries. Standard level of detail.";
+    case "heavy":
+      return "Use LIMIT 15-25 in SQL queries. Include more data points, groups, and detail.";
+  }
+}
+
+function getStyleInstructions(style: DashboardGenerationConfig["chartStyle"]): string {
+  switch (style) {
+    case "2d":
+      return 'Use standard professional chart types: bar, line, area, pie. Choose the type that best represents each data relationship.';
+    case "3d":
+      return 'Use chart types that look good with 3D depth effects: bar, pie, area preferred. The frontend will apply gradient and shadow effects to create subtle 3D depth. Prefer pie charts for categorical data and bar charts for comparisons.';
+    case "flat":
+      return 'Prefer simpler chart types: bar and line primarily. Avoid pie charts. Keep visualizations clean and flat.';
+  }
+}
+
 export async function generateDashboard(
   tableName: string,
   columns: ColumnInfo[],
-  rowCount: number
-): Promise<{ metrics: DashboardMetric[]; charts: ChartConfig[]; suggestions: string[] }> {
+  rowCount: number,
+  config?: Partial<DashboardGenerationConfig>
+): Promise<{ metrics: DashboardMetric[]; charts: (ChartConfig & { grid_position?: { x: number; y: number; w: number; h: number } })[]; suggestions: string[] }> {
+  const cfg: DashboardGenerationConfig = { ...DEFAULT_CONFIG, ...config };
   const dataContext = buildDataContext(tableName, columns, rowCount);
+
+  const layoutInstr = getLayoutInstructions(cfg);
+  const densityInstr = getDensityInstructions(cfg.chartDensity);
+  const styleInstr = getStyleInstructions(cfg.chartStyle);
 
   const prompt = `You are a data analytics expert. Given this dataset, generate an initial dashboard.
 
 ${dataContext}
 
+${layoutInstr}
+${densityInstr}
+${styleInstr}
+
 Generate a JSON response with:
 1. "metrics" - array of 3-4 key summary metrics. Each: { "label": string, "value": string/number, "icon": "dollar"|"users"|"package"|"chart"|"hash" }
-2. "charts" - array of 2-4 charts. Each: { "type": "bar"|"line"|"pie"|"area", "title": string, "xKey": string, "yKeys": [string], "explanation": string }
-   For each chart, also include "sql" - a valid SQLite SELECT query against table "data" to get the chart data. Use actual column names from the SQLite table. Group, aggregate, and limit results appropriately (max 15 rows for readability).
+2. "charts" - array of exactly ${cfg.chartCount} charts. Each: { "type": "bar"|"line"|"pie"|"area", "title": string, "xKey": string, "yKeys": [string], "explanation": string, "grid_position": {"x": number, "y": number, "w": number, "h": number} }
+   For each chart, also include "sql" - a valid SQLite SELECT query against table "data" to get the chart data. Use actual column names from the SQLite table. Group, aggregate, and limit results appropriately.
 3. "suggestions" - array of 4-5 natural language questions a user might ask about this data
 
 Rules:
@@ -65,6 +133,7 @@ Rules:
 - Choose chart types that best represent the data relationships
 - Make suggestions specific to this dataset
 - Keep chart titles concise
+- Every chart MUST have a grid_position with x, y, w, h values for a 12-column grid
 
 Return ONLY valid JSON, no markdown or explanation.`;
 
@@ -80,7 +149,7 @@ Return ONLY valid JSON, no markdown or explanation.`;
     const jsonStr = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(jsonStr);
 
-    const charts: ChartConfig[] = [];
+    const charts: (ChartConfig & { grid_position?: { x: number; y: number; w: number; h: number } })[] = [];
     for (const chartDef of parsed.charts || []) {
       try {
         if (chartDef.sql) {
@@ -92,6 +161,7 @@ Return ONLY valid JSON, no markdown or explanation.`;
             xKey: chartDef.xKey,
             yKeys: chartDef.yKeys,
             explanation: chartDef.explanation,
+            grid_position: chartDef.grid_position || undefined,
           });
         }
       } catch (err) {
@@ -177,7 +247,8 @@ Respond with JSON:
     "yKeys": ["columns for y-axis"]
   } or null,
   "suggestions": ["2-3 follow-up questions"],
-  "hypothesis": "If drilling into data, provide a hypothesis" or null
+  "hypothesis": "If drilling into data, provide a hypothesis" or null,
+  "confidence": 4.2
 }
 
 Rules:
@@ -187,6 +258,7 @@ Rules:
 - Always provide meaningful analysis in "message"
 - Chart is optional - only include when visualization adds value
 - Be conversational and insightful
+- "confidence" is a score from 1.0 to 5.0 rating how confident you are in your analysis accuracy. Consider: data quality, query complexity, whether the question maps well to available columns, and result completeness. 1=very low confidence, 5=very high confidence.
 
 Return ONLY valid JSON.`;
 
@@ -232,11 +304,17 @@ Return ONLY valid JSON.`;
       }
     }
 
+    let confidence = parsed.confidence;
+    if (typeof confidence === "number") {
+      confidence = Math.max(1, Math.min(5, Math.round(confidence * 10) / 10));
+    }
+
     return {
       message: parsed.message || "I analyzed your data but couldn't generate specific insights.",
       chart,
       suggestions: parsed.suggestions || [],
       hypothesis: parsed.hypothesis,
+      confidence: confidence || undefined,
     };
   } catch (err) {
     console.error("Failed to parse AI query response:", err, "Raw text:", text.slice(0, 200));
