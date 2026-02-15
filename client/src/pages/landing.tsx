@@ -8,7 +8,7 @@ import {
   Download, Layers, BrainCircuit, TrendingUp, Zap, Shield, Globe,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import logoWithText from "@assets/ChatGPT_Image_Feb_15,_2026,_11_16_42_AM_1771145168684.png";
+import logoWithText from "@assets/ChatGPT_Image_Feb_15,_2026,_03_59_07_PM_1771151367873.png";
 import heroVideo from "@assets/SaaS_Product_Demo_Video_Generation_1771140201051.mp4";
 
 function FloatingOrbs() {

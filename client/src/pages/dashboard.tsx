@@ -50,7 +50,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ResponsiveGridLayout as RGLBase } from "react-grid-layout";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import logoIcon from "@assets/ChatGPT_Image_Feb_15,_2026,_11_17_44_AM_1771145176190.png";
+import logoIcon from "@assets/ChatGPT_Image_Feb_15,_2026,_03_56_17_PM_1771151200056.png";
 
 const ResponsiveGridLayout = RGLBase as any;
 
@@ -274,7 +274,7 @@ export default function DashboardPage() {
           minW: 3,
           minH: 3,
         }));
-        setGridLayouts({ lg: layout, md: layout, sm: layout.map(l => ({ ...l, x: 0, w: 12 })) });
+        setGridLayouts(buildAllBreakpoints(layout));
       }
     }
   }, [initialDashboard]);
@@ -312,41 +312,64 @@ export default function DashboardPage() {
     return 100; // Fixed row height for natural scrolling
   }, []);
 
+  const buildAllBreakpoints = useCallback((layout: GridLayout[]) => {
+    const scaleLayout = (items: GridLayout[], maxCols: number): GridLayout[] => {
+      const ratio = maxCols / 12;
+      const scaled: GridLayout[] = [];
+      for (const l of items) {
+        const w = Math.max(Math.round(l.w * ratio), l.minW || 2);
+        const x = Math.min(Math.round(l.x * ratio), maxCols - w);
+        scaled.push({ ...l, w, x: Math.max(0, x), minW: Math.min(l.minW || 2, maxCols) });
+      }
+      return scaled;
+    };
+    const stackLayout = (items: GridLayout[], cols: number): GridLayout[] => {
+      return items.map((l, i) => ({ ...l, x: 0, y: i * (l.h || 4), w: cols, minW: 1 }));
+    };
+    return {
+      lg: layout,
+      md: scaleLayout(layout, 10),
+      sm: scaleLayout(layout, 6),
+      xs: stackLayout(layout, 4),
+      xxs: stackLayout(layout, 2),
+    };
+  }, []);
+
   const applyLayoutTemplate = useCallback((templateId: string, chartCount: number) => {
     const template = LAYOUT_TEMPLATES.find((t) => t.id === templateId);
     if (!template || chartCount === 0) return;
     const layout = template.getLayout(chartCount);
-    setGridLayouts({
-      lg: layout,
-      md: layout,
-      sm: layout.map((l) => ({ ...l, x: 0, w: 12 })),
-    });
-  }, []);
+    setGridLayouts(buildAllBreakpoints(layout));
+  }, [buildAllBreakpoints]);
+
+  const layoutVersionRef = useRef(0);
+  const skipNextLayoutChange = useRef(false);
 
   const handleLayoutSelect = useCallback((templateId: string) => {
     setSelectedLayout(templateId);
+    layoutVersionRef.current += 1;
+    skipNextLayoutChange.current = true;
     applyLayoutTemplate(templateId, dashboardCharts.length);
   }, [dashboardCharts.length, applyLayoutTemplate]);
 
   const handleLayoutChange = useCallback((_layout: any, allLayouts: any) => {
+    if (skipNextLayoutChange.current) {
+      skipNextLayoutChange.current = false;
+      return;
+    }
     setGridLayouts(allLayouts);
   }, []);
 
   const addChartToGrid = useCallback((chart: ChartConfig) => {
     setDashboardCharts((prev) => {
       const newCharts = [...prev, chart];
-      const newIndex = newCharts.length - 1;
       const template = LAYOUT_TEMPLATES.find((t) => t.id === selectedLayout);
       if (template) {
         const newLayout = template.getLayout(newCharts.length);
-        setGridLayouts((prevLayouts) => ({
-          lg: newLayout,
-          md: newLayout,
-          sm: newLayout.map((l) => ({ ...l, x: 0, w: 12 })),
-        }));
+        setGridLayouts(buildAllBreakpoints(newLayout));
       } else {
         const newItem: GridLayout = {
-          i: String(newIndex),
+          i: String(newCharts.length - 1),
           x: 0,
           y: Infinity,
           w: 6,
@@ -356,13 +379,12 @@ export default function DashboardPage() {
         };
         setGridLayouts((prevLayouts) => {
           const lgLayout = [...(prevLayouts.lg || []), newItem];
-          const smLayout = [...(prevLayouts.sm || []), { ...newItem, w: 12, x: 0 }];
-          return { ...prevLayouts, lg: lgLayout, md: lgLayout, sm: smLayout };
+          return buildAllBreakpoints(lgLayout);
         });
       }
       return newCharts;
     });
-  }, [selectedLayout]);
+  }, [selectedLayout, buildAllBreakpoints]);
 
   const handleSendMessage = useCallback(async (content: string) => {
     const userMessage: Message = {
@@ -439,17 +461,13 @@ export default function DashboardPage() {
       const template = LAYOUT_TEMPLATES.find((t) => t.id === selectedLayout);
       if (template && newCharts.length > 0) {
         const newLayout = template.getLayout(newCharts.length);
-        setGridLayouts({
-          lg: newLayout,
-          md: newLayout,
-          sm: newLayout.map((l) => ({ ...l, x: 0, w: 12 })),
-        });
+        setGridLayouts(buildAllBreakpoints(newLayout));
       } else {
         setGridLayouts({});
       }
       return newCharts;
     });
-  }, [selectedLayout]);
+  }, [selectedLayout, buildAllBreakpoints]);
 
   const handleManualChartCreated = useCallback((chart: ChartConfig) => {
     addChartToGrid(chart);
@@ -732,10 +750,10 @@ export default function DashboardPage() {
     const template = LAYOUT_TEMPLATES.find((t) => t.id === selectedLayout);
     if (template) {
       const layout = template.getLayout(dashboardCharts.length);
-      return { lg: layout, md: layout, sm: layout.map((l) => ({ ...l, x: 0, w: 12 })) };
+      return buildAllBreakpoints(layout);
     }
-    return { lg: [], md: [], sm: [] };
-  }, [gridLayouts, dashboardCharts.length, selectedLayout]);
+    return { lg: [], md: [], sm: [], xs: [], xxs: [] };
+  }, [gridLayouts, dashboardCharts.length, selectedLayout, buildAllBreakpoints]);
 
   const sidebarStyle = {
     "--sidebar-width": "14rem",
@@ -996,7 +1014,7 @@ export default function DashboardPage() {
               ) : (
                 <>
                   {showManualBuilder && (
-                    <div className="px-4 pt-3 flex-shrink-0">
+                    <div className="mb-4 flex-shrink-0">
                       <ManualChartBuilder
                         columns={columns}
                         datasetId={datasetId}
@@ -1006,9 +1024,9 @@ export default function DashboardPage() {
                   )}
 
                   {metricsVisible && dashboardMetrics.length > 0 && (
-                    <div className="px-4 pt-3 flex-shrink-0">
-                      <div className="p-3 rounded-md bg-gradient-to-r from-pink-500/5 via-transparent to-purple-500/5 dark:from-pink-500/10 dark:to-purple-500/10">
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="mb-6 flex-shrink-0">
+                      <div className="p-4 rounded-md bg-gradient-to-r from-pink-500/5 via-transparent to-purple-500/5 dark:from-pink-500/10 dark:to-purple-500/10">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                           {dashboardMetrics.map((m, i) => (
                             <MetricCard key={i} metric={m} />
                           ))}
@@ -1020,17 +1038,16 @@ export default function DashboardPage() {
                   <div className="w-full" ref={gridContainerRef}>
                     {dashboardCharts.length > 0 ? (
                       <ResponsiveGridLayout
+                        key={`${selectedLayout}-${dashboardCharts.length}`}
                         className="layout"
                         layouts={currentLayouts}
                         breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
                         cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
                         rowHeight={100}
                         width={gridWidth}
-                        onLayoutChange={(currentLayout: any, allLayouts: any) => {
-                          setGridLayouts(allLayouts);
-                        }}
+                        onLayoutChange={handleLayoutChange}
                         draggableHandle=".drag-handle"
-                        resizeHandles={["se", "sw", "nw", "ne", "e", "w", "n", "s"] as any}
+                        resizeHandles={["se", "sw", "ne", "nw", "e", "w", "n", "s"] as any}
                         margin={[16, 16] as [number, number]}
                         containerPadding={[0, 0] as [number, number]}
                         compactType="vertical"
