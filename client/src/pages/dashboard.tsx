@@ -309,25 +309,8 @@ export default function DashboardPage() {
   }, []);
 
   const dynamicRowHeight = useMemo(() => {
-    const headerHeight = 44;
-    const metricsHeight = metricsVisible && dashboardMetrics.length > 0 ? 90 : 0;
-    const padding = 32;
-    const usable = availableHeight - headerHeight - metricsHeight - padding;
-
-    if (dashboardCharts.length === 0) return 60;
-
-    const template = LAYOUT_TEMPLATES.find((t) => t.id === selectedLayout);
-    if (!template) return 60;
-
-    const layout = template.getLayout(dashboardCharts.length);
-    const maxRow = layout.reduce((max, item) => Math.max(max, item.y + item.h), 0);
-
-    if (maxRow === 0) return 60;
-
-    const marginRows = Math.max(maxRow - 1, 0) * 12;
-    const rowHeight = Math.max((usable - marginRows) / maxRow, 30);
-    return Math.min(rowHeight, 100);
-  }, [availableHeight, metricsVisible, dashboardMetrics.length, dashboardCharts.length, selectedLayout]);
+    return 100; // Fixed row height for natural scrolling
+  }, []);
 
   const applyLayoutTemplate = useCallback((templateId: string, chartCount: number) => {
     const template = LAYOUT_TEMPLATES.find((t) => t.id === templateId);
@@ -832,7 +815,7 @@ export default function DashboardPage() {
                         <SidebarMenuButton
                           onClick={() => handleColumnClick(col.name)}
                           data-testid={`column-${col.name}`}
-                          className="py-1"
+                          className="py-1 w-full justify-start gap-2"
                         >
                           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0">
                             {col.type === "numeric" ? "num" : col.type === "date" ? "date" : "txt"}
@@ -842,18 +825,18 @@ export default function DashboardPage() {
                       </SidebarMenuItem>
                     </SidebarMenu>
                   ))}
-                  <div className="px-2 pt-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full text-xs justify-start"
-                      onClick={handleViewFullTable}
-                      data-testid="button-view-full-table"
-                    >
-                      <Table2 className="w-3 h-3 mr-1" />
-                      View Full Table
-                    </Button>
-                  </div>
+                </div>
+                <div className="px-2 pt-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs justify-start"
+                    onClick={handleViewFullTable}
+                    data-testid="button-view-full-table"
+                  >
+                    <Table2 className="w-3 h-3 mr-1" />
+                    View Full Table
+                  </Button>
                 </div>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -982,9 +965,9 @@ export default function DashboardPage() {
             </div>
           </header>
 
-          <main className="flex-1 overflow-hidden flex" ref={mainAreaRef}>
+          <main className="flex-1 overflow-hidden flex flex-col sm:flex-row" ref={mainAreaRef}>
             <div
-              className={`flex-1 min-w-0 overflow-hidden flex flex-col ${chatOpen ? "max-w-[calc(100%-380px)]" : ""}`}
+              className={`flex-1 min-w-0 overflow-y-auto overflow-x-hidden flex flex-col ${chatOpen ? "sm:max-w-[calc(100%-380px)]" : "w-full"}`}
               ref={dashboardRef}
             >
               {dashLoading && initialMode === "auto" ? (
@@ -1030,7 +1013,7 @@ export default function DashboardPage() {
                     </div>
                   )}
 
-                  <div className="flex-1 min-h-0 px-4 pt-3 pb-2" ref={gridContainerRef}>
+                  <div className="flex-1 min-h-0 px-4 pt-3 pb-8" ref={gridContainerRef}>
                     {dashboardCharts.length > 0 ? (
                       <ResponsiveGridLayout
                         className="layout"
@@ -1070,7 +1053,7 @@ export default function DashboardPage() {
                                     <EChartCard
                                       chart={chart}
                                       onSliceClick={handleSliceClick}
-                                      showControls={false}
+                                      showControls={true}
                                       noCard
                                       fillHeight
                                     />
@@ -1079,7 +1062,7 @@ export default function DashboardPage() {
                                   <ChartCard
                                     chart={chart}
                                     onSliceClick={handleSliceClick}
-                                    showControls={false}
+                                    showControls={true}
                                     noCard
                                     fillHeight
                                   />

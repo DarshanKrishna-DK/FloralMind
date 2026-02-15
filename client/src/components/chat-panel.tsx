@@ -150,7 +150,7 @@ export function ChatPanel({
   const activeSuggestions = suggestions.length > 0 ? suggestions : (messages.length === 0 ? defaultSuggestions : []);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className={`flex flex-col h-full bg-background border-l w-full sm:w-[380px] fixed sm:relative inset-y-0 right-0 z-50 transition-transform duration-300 ${messages.length > 0 || pinnedChart ? "translate-x-0" : "translate-x-full sm:translate-x-0"}`}>
       <div className="px-4 py-3 border-b">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center">
