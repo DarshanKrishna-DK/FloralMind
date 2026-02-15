@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Sparkles, Loader2, Bot, User, X } from "lucide-react";
+import { Send, Sparkles, Loader2, Bot, User, X, Plus, Check } from "lucide-react";
 import { ChartCard } from "@/components/chart-card";
 import type { Message, ChartConfig } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,6 +13,7 @@ interface ChatPanelProps {
   messages: Message[];
   onSendMessage: (content: string) => Promise<void>;
   onSliceClick?: (data: Record<string, unknown>) => void;
+  onAddChartToDashboard?: (chart: ChartConfig) => void;
   isLoading: boolean;
   suggestions?: string[];
   pinnedChart?: ChartConfig | null;
@@ -24,12 +25,14 @@ export function ChatPanel({
   messages,
   onSendMessage,
   onSliceClick,
+  onAddChartToDashboard,
   isLoading,
   suggestions = [],
   pinnedChart,
   onClearPinnedChart,
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
+  const [addedChartIds, setAddedChartIds] = useState<Set<number>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,6 +59,13 @@ export function ChatPanel({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
+    }
+  };
+
+  const handleAddChart = (chart: ChartConfig, msgId: number) => {
+    if (onAddChartToDashboard) {
+      onAddChartToDashboard(chart);
+      setAddedChartIds((prev) => new Set(prev).add(msgId));
     }
   };
 
@@ -136,12 +146,36 @@ export function ChatPanel({
                   </div>
 
                   {msg.chartData && (
-                    <ChartCard
-                      chart={msg.chartData as ChartConfig}
-                      onSliceClick={onSliceClick}
-                      compact
-                      showControls={false}
-                    />
+                    <div className="space-y-2">
+                      <ChartCard
+                        chart={msg.chartData as ChartConfig}
+                        onSliceClick={onSliceClick}
+                        compact
+                        showControls={false}
+                      />
+                      {onAddChartToDashboard && (
+                        <Button
+                          variant={addedChartIds.has(msg.id) ? "secondary" : "outline"}
+                          size="sm"
+                          className="w-full text-xs"
+                          onClick={() => handleAddChart(msg.chartData as ChartConfig, msg.id)}
+                          disabled={addedChartIds.has(msg.id)}
+                          data-testid={`button-add-chart-${msg.id}`}
+                        >
+                          {addedChartIds.has(msg.id) ? (
+                            <>
+                              <Check className="w-3 h-3 mr-1" />
+                              Added to Dashboard
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-3 h-3 mr-1" />
+                              Add to Dashboard
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   )}
 
                   {msg.suggestions && (msg.suggestions as string[]).length > 0 && (

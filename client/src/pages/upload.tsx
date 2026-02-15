@@ -13,7 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "@/components/theme-toggle";
-import logoWithText from "@assets/ChatGPT_Image_Feb_15,_2026,_11_16_42_AM_1771134475217.png";
+import logoWithText from "@assets/ChatGPT_Image_Feb_15,_2026,_11_16_42_AM_1771145168684.png";
 
 type DashboardMode = "auto" | "manual";
 type DataSource = "csv" | "supabase";

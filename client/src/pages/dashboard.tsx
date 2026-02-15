@@ -36,7 +36,7 @@ import {
   BarChart3, MessageSquare, Upload, Database, Table2, Sparkles,
   Columns3, LayoutGrid, Plus, Eye, EyeOff,
   Download, FileText, PanelRightOpen, PanelRightClose, Loader2, ClipboardCopy,
-  GripVertical, Image, Code, Share2, X,
+  GripVertical, Image, Code, Share2, X, Grid2X2, Grid3X3, Rows3, SquareSplitHorizontal,
 } from "lucide-react";
 import { MetricCard } from "@/components/metric-card";
 import { ChartCard } from "@/components/chart-card";
@@ -65,17 +65,133 @@ interface GridLayout {
   static?: boolean;
 }
 
-function generateLayout(count: number, cols: number = 2): GridLayout[] {
-  return Array.from({ length: count }, (_, i) => ({
-    i: String(i),
-    x: (i % cols) * (12 / cols),
-    y: Math.floor(i / cols) * 4,
-    w: 12 / cols,
-    h: 4,
-    minW: 3,
-    minH: 2,
-  }));
+interface LayoutTemplate {
+  id: string;
+  label: string;
+  icon: any;
+  getLayout: (count: number) => GridLayout[];
+  totalRows: number;
 }
+
+function createLayoutTemplates(): LayoutTemplate[] {
+  return [
+    {
+      id: "grid-2col",
+      label: "2 Column Grid",
+      icon: Grid2X2,
+      totalRows: 6,
+      getLayout: (count: number) => {
+        return Array.from({ length: count }, (_, i) => ({
+          i: String(i),
+          x: (i % 2) * 6,
+          y: Math.floor(i / 2) * 6,
+          w: 6,
+          h: 6,
+          minW: 3,
+          minH: 3,
+        }));
+      },
+    },
+    {
+      id: "grid-3col",
+      label: "3 Column Grid",
+      icon: Grid3X3,
+      totalRows: 4,
+      getLayout: (count: number) => {
+        return Array.from({ length: count }, (_, i) => ({
+          i: String(i),
+          x: (i % 3) * 4,
+          y: Math.floor(i / 3) * 4,
+          w: 4,
+          h: 4,
+          minW: 3,
+          minH: 3,
+        }));
+      },
+    },
+    {
+      id: "featured",
+      label: "Featured + Grid",
+      icon: SquareSplitHorizontal,
+      totalRows: 6,
+      getLayout: (count: number) => {
+        if (count === 0) return [];
+        const layouts: GridLayout[] = [
+          { i: "0", x: 0, y: 0, w: 8, h: 6, minW: 4, minH: 3 },
+        ];
+        for (let i = 1; i < count; i++) {
+          const row = Math.floor((i - 1) / 2);
+          layouts.push({
+            i: String(i),
+            x: i === 1 ? 8 : i === 2 ? 8 : ((i - 1) % 2) * 6,
+            y: i <= 2 ? (i - 1) * 3 : 6 + row * 4,
+            w: i <= 2 ? 4 : 6,
+            h: i <= 2 ? 3 : 4,
+            minW: 3,
+            minH: 3,
+          });
+        }
+        return layouts;
+      },
+    },
+    {
+      id: "rows",
+      label: "Stacked Rows",
+      icon: Rows3,
+      totalRows: 4,
+      getLayout: (count: number) => {
+        return Array.from({ length: count }, (_, i) => ({
+          i: String(i),
+          x: 0,
+          y: i * 4,
+          w: 12,
+          h: 4,
+          minW: 6,
+          minH: 3,
+        }));
+      },
+    },
+    {
+      id: "mixed",
+      label: "Mixed Layout",
+      icon: LayoutGrid,
+      totalRows: 6,
+      getLayout: (count: number) => {
+        const templates: { w: number; h: number }[] = [
+          { w: 6, h: 6 }, { w: 6, h: 3 }, { w: 6, h: 3 },
+          { w: 4, h: 4 }, { w: 4, h: 4 }, { w: 4, h: 4 },
+          { w: 6, h: 4 }, { w: 6, h: 4 },
+        ];
+        const layouts: GridLayout[] = [];
+        let currentX = 0;
+        let currentY = 0;
+        let rowMaxH = 0;
+        for (let i = 0; i < count; i++) {
+          const t = templates[i % templates.length];
+          if (currentX + t.w > 12) {
+            currentX = 0;
+            currentY += rowMaxH;
+            rowMaxH = 0;
+          }
+          layouts.push({
+            i: String(i),
+            x: currentX,
+            y: currentY,
+            w: t.w,
+            h: t.h,
+            minW: 3,
+            minH: 3,
+          });
+          currentX += t.w;
+          rowMaxH = Math.max(rowMaxH, t.h);
+        }
+        return layouts;
+      },
+    },
+  ];
+}
+
+const LAYOUT_TEMPLATES = createLayoutTemplates();
 
 export default function DashboardPage() {
   const params = useParams<{ id: string }>();
@@ -104,8 +220,11 @@ export default function DashboardPage() {
   const [columnDataLoading, setColumnDataLoading] = useState(false);
   const [showAllColumns, setShowAllColumns] = useState(false);
   const [gridWidth, setGridWidth] = useState(800);
+  const [selectedLayout, setSelectedLayout] = useState("grid-2col");
+  const [metricsVisible, setMetricsVisible] = useState(true);
   const dashboardRef = useRef<HTMLDivElement>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
+  const mainAreaRef = useRef<HTMLDivElement>(null);
 
   const { data: dataset, isLoading: datasetLoading } = useQuery<Dataset>({
     queryKey: ["/api/datasets", datasetId],
@@ -130,10 +249,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (dashboardCharts.length > 0 && Object.keys(gridLayouts).length === 0) {
-      const layout = generateLayout(dashboardCharts.length, 2);
-      setGridLayouts({ lg: layout, md: layout, sm: generateLayout(dashboardCharts.length, 1) });
+      applyLayoutTemplate(selectedLayout, dashboardCharts.length);
     }
-  }, [dashboardCharts.length, gridLayouts]);
+  }, [dashboardCharts.length]);
 
   useEffect(() => {
     const el = gridContainerRef.current;
@@ -148,6 +266,53 @@ export default function DashboardPage() {
     return () => ro.disconnect();
   }, []);
 
+  const [availableHeight, setAvailableHeight] = useState(() =>
+    typeof window !== "undefined" ? window.innerHeight : 800
+  );
+
+  useEffect(() => {
+    const handleResize = () => setAvailableHeight(window.innerHeight);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const dynamicRowHeight = useMemo(() => {
+    const headerHeight = 44;
+    const metricsHeight = metricsVisible && dashboardMetrics.length > 0 ? 90 : 0;
+    const padding = 32;
+    const usable = availableHeight - headerHeight - metricsHeight - padding;
+
+    if (dashboardCharts.length === 0) return 60;
+
+    const template = LAYOUT_TEMPLATES.find((t) => t.id === selectedLayout);
+    if (!template) return 60;
+
+    const layout = template.getLayout(dashboardCharts.length);
+    const maxRow = layout.reduce((max, item) => Math.max(max, item.y + item.h), 0);
+
+    if (maxRow === 0) return 60;
+
+    const marginRows = Math.max(maxRow - 1, 0) * 12;
+    const rowHeight = Math.max((usable - marginRows) / maxRow, 30);
+    return Math.min(rowHeight, 100);
+  }, [availableHeight, metricsVisible, dashboardMetrics.length, dashboardCharts.length, selectedLayout]);
+
+  const applyLayoutTemplate = useCallback((templateId: string, chartCount: number) => {
+    const template = LAYOUT_TEMPLATES.find((t) => t.id === templateId);
+    if (!template || chartCount === 0) return;
+    const layout = template.getLayout(chartCount);
+    setGridLayouts({
+      lg: layout,
+      md: layout,
+      sm: layout.map((l) => ({ ...l, x: 0, w: 12 })),
+    });
+  }, []);
+
+  const handleLayoutSelect = useCallback((templateId: string) => {
+    setSelectedLayout(templateId);
+    applyLayoutTemplate(templateId, dashboardCharts.length);
+  }, [dashboardCharts.length, applyLayoutTemplate]);
+
   const handleLayoutChange = useCallback((_layout: any, allLayouts: any) => {
     setGridLayouts(allLayouts);
   }, []);
@@ -156,23 +321,33 @@ export default function DashboardPage() {
     setDashboardCharts((prev) => {
       const newCharts = [...prev, chart];
       const newIndex = newCharts.length - 1;
-      const newItem: GridLayout = {
-        i: String(newIndex),
-        x: 0,
-        y: Infinity,
-        w: 6,
-        h: 4,
-        minW: 3,
-        minH: 2,
-      };
-      setGridLayouts((prevLayouts) => {
-        const lgLayout = [...(prevLayouts.lg || []), newItem];
-        const smLayout = [...(prevLayouts.sm || []), { ...newItem, w: 12, x: 0 }];
-        return { ...prevLayouts, lg: lgLayout, md: lgLayout, sm: smLayout };
-      });
+      const template = LAYOUT_TEMPLATES.find((t) => t.id === selectedLayout);
+      if (template) {
+        const newLayout = template.getLayout(newCharts.length);
+        setGridLayouts((prevLayouts) => ({
+          lg: newLayout,
+          md: newLayout,
+          sm: newLayout.map((l) => ({ ...l, x: 0, w: 12 })),
+        }));
+      } else {
+        const newItem: GridLayout = {
+          i: String(newIndex),
+          x: 0,
+          y: Infinity,
+          w: 6,
+          h: 4,
+          minW: 3,
+          minH: 3,
+        };
+        setGridLayouts((prevLayouts) => {
+          const lgLayout = [...(prevLayouts.lg || []), newItem];
+          const smLayout = [...(prevLayouts.sm || []), { ...newItem, w: 12, x: 0 }];
+          return { ...prevLayouts, lg: lgLayout, md: lgLayout, sm: smLayout };
+        });
+      }
       return newCharts;
     });
-  }, []);
+  }, [selectedLayout]);
 
   const handleSendMessage = useCallback(async (content: string) => {
     const userMessage: Message = {
@@ -202,9 +377,6 @@ export default function DashboardPage() {
       };
       setChatMessages((prev) => [...prev, assistantMessage]);
 
-      if (data.chart) {
-        addChartToGrid(data.chart);
-      }
       if (data.suggestions) {
         setSuggestions(data.suggestions);
       }
@@ -222,7 +394,7 @@ export default function DashboardPage() {
     } finally {
       setIsAiLoading(false);
     }
-  }, [datasetId, addChartToGrid]);
+  }, [datasetId]);
 
   const handleSliceClick = useCallback(async (data: Record<string, unknown>) => {
     const keys = Object.entries(data)
@@ -244,26 +416,26 @@ export default function DashboardPage() {
   const handleRemoveChart = useCallback((index: number) => {
     setDashboardCharts((prev) => {
       const newCharts = prev.filter((_, i) => i !== index);
-      setGridLayouts((prevLayouts) => {
-        const updated: { [key: string]: GridLayout[] } = {};
-        for (const [breakpoint, layouts] of Object.entries(prevLayouts)) {
-          updated[breakpoint] = layouts
-            .filter((l) => l.i !== String(index))
-            .map((l) => {
-              const oldIdx = parseInt(l.i);
-              if (oldIdx > index) {
-                return { ...l, i: String(oldIdx - 1) };
-              }
-              return l;
-            });
-        }
-        return updated;
-      });
+      const template = LAYOUT_TEMPLATES.find((t) => t.id === selectedLayout);
+      if (template && newCharts.length > 0) {
+        const newLayout = template.getLayout(newCharts.length);
+        setGridLayouts({
+          lg: newLayout,
+          md: newLayout,
+          sm: newLayout.map((l) => ({ ...l, x: 0, w: 12 })),
+        });
+      } else {
+        setGridLayouts({});
+      }
       return newCharts;
     });
-  }, []);
+  }, [selectedLayout]);
 
   const handleManualChartCreated = useCallback((chart: ChartConfig) => {
+    addChartToGrid(chart);
+  }, [addChartToGrid]);
+
+  const handleAddChartFromChat = useCallback((chart: ChartConfig) => {
     addChartToGrid(chart);
   }, [addChartToGrid]);
 
@@ -340,17 +512,34 @@ export default function DashboardPage() {
   const handleExportPNG = useCallback(async () => {
     try {
       const html2canvas = (await import("html2canvas")).default;
-      if (dashboardRef.current) {
-        const canvas = await html2canvas(dashboardRef.current, {
-          backgroundColor: null,
-          scale: 2,
-          useCORS: true,
-        });
-        const link = document.createElement("a");
-        link.download = `${dataset?.name || "dashboard"}-export.png`;
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-      }
+      const target = dashboardRef.current;
+      if (!target) return;
+
+      const originalOverflow = target.style.overflow;
+      const originalHeight = target.style.height;
+      target.style.overflow = "visible";
+      target.style.height = "auto";
+
+      const canvas = await html2canvas(target, {
+        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--background').trim()
+          ? `hsl(${getComputedStyle(document.documentElement).getPropertyValue('--background').trim()})`
+          : "#ffffff",
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        windowWidth: target.scrollWidth,
+        windowHeight: target.scrollHeight,
+        width: target.scrollWidth,
+        height: target.scrollHeight,
+      });
+
+      target.style.overflow = originalOverflow;
+      target.style.height = originalHeight;
+
+      const link = document.createElement("a");
+      link.download = `${dataset?.name || "dashboard"}-export.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
     } catch (err) {
       console.error("Export failed:", err);
     }
@@ -360,19 +549,59 @@ export default function DashboardPage() {
     try {
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
-      if (dashboardRef.current) {
-        const canvas = await html2canvas(dashboardRef.current, {
-          backgroundColor: "#ffffff",
-          scale: 2,
-          useCORS: true,
-        });
-        const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF("l", "mm", "a4");
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`${dataset?.name || "dashboard"}-report.pdf`);
-      }
+      const target = dashboardRef.current;
+      if (!target) return;
+
+      const originalOverflow = target.style.overflow;
+      const originalHeight = target.style.height;
+      target.style.overflow = "visible";
+      target.style.height = "auto";
+
+      const canvas = await html2canvas(target, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        windowWidth: target.scrollWidth,
+        windowHeight: target.scrollHeight,
+        width: target.scrollWidth,
+        height: target.scrollHeight,
+      });
+
+      target.style.overflow = originalOverflow;
+      target.style.height = originalHeight;
+
+      const imgData = canvas.toDataURL("image/png");
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+
+      const isLandscape = imgWidth > imgHeight;
+      const pdf = new jsPDF(isLandscape ? "l" : "p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const margin = 10;
+      const usableW = pdfWidth - margin * 2;
+      const usableH = pdfHeight - margin * 2;
+
+      const scale = Math.min(usableW / imgWidth, usableH / imgHeight);
+      const finalW = imgWidth * scale;
+      const finalH = imgHeight * scale;
+
+      const offsetX = (pdfWidth - finalW) / 2;
+      const offsetY = margin;
+
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(0, 0, pdfWidth, pdfHeight, "F");
+
+      pdf.addImage(imgData, "PNG", offsetX, offsetY, finalW, finalH);
+
+      const footerY = pdfHeight - 6;
+      pdf.setFontSize(8);
+      pdf.setTextColor(150);
+      pdf.text(`FloralMind - ${dataset?.name || "Dashboard"} - ${new Date().toLocaleDateString()}`, pdfWidth / 2, footerY, { align: "center" });
+
+      pdf.save(`${dataset?.name || "dashboard"}-report.pdf`);
     } catch (err) {
       console.error("PDF export failed:", err);
     }
@@ -406,13 +635,28 @@ export default function DashboardPage() {
   const handleExportHTML = useCallback(async () => {
     try {
       const html2canvas = (await import("html2canvas")).default;
-      if (!dashboardRef.current) return;
+      const target = dashboardRef.current;
+      if (!target) return;
 
-      const canvas = await html2canvas(dashboardRef.current, {
+      const originalOverflow = target.style.overflow;
+      const originalHeight = target.style.height;
+      target.style.overflow = "visible";
+      target.style.height = "auto";
+
+      const canvas = await html2canvas(target, {
         backgroundColor: "#ffffff",
         scale: 2,
         useCORS: true,
+        logging: false,
+        windowWidth: target.scrollWidth,
+        windowHeight: target.scrollHeight,
+        width: target.scrollWidth,
+        height: target.scrollHeight,
       });
+
+      target.style.overflow = originalOverflow;
+      target.style.height = originalHeight;
+
       const imgData = canvas.toDataURL("image/png");
       const name = dataset?.name || "Dashboard";
 
@@ -465,9 +709,13 @@ export default function DashboardPage() {
 
   const currentLayouts = useMemo(() => {
     if (Object.keys(gridLayouts).length > 0) return gridLayouts;
-    const layout = generateLayout(dashboardCharts.length, 2);
-    return { lg: layout, md: layout, sm: generateLayout(dashboardCharts.length, 1) };
-  }, [gridLayouts, dashboardCharts.length]);
+    const template = LAYOUT_TEMPLATES.find((t) => t.id === selectedLayout);
+    if (template) {
+      const layout = template.getLayout(dashboardCharts.length);
+      return { lg: layout, md: layout, sm: layout.map((l) => ({ ...l, x: 0, w: 12 })) };
+    }
+    return { lg: [], md: [], sm: [] };
+  }, [gridLayouts, dashboardCharts.length, selectedLayout]);
 
   const sidebarStyle = {
     "--sidebar-width": "14rem",
@@ -573,6 +821,30 @@ export default function DashboardPage() {
               </SidebarGroupContent>
             </SidebarGroup>
 
+            <SidebarGroup>
+              <SidebarGroupLabel>Layout</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <div className="px-2 grid grid-cols-3 gap-1">
+                  {LAYOUT_TEMPLATES.map((template) => {
+                    const Icon = template.icon;
+                    return (
+                      <Button
+                        key={template.id}
+                        variant={selectedLayout === template.id ? "default" : "ghost"}
+                        size="sm"
+                        className="flex flex-col items-center gap-0.5 h-auto py-2 px-1 text-[10px]"
+                        onClick={() => handleLayoutSelect(template.id)}
+                        data-testid={`button-layout-${template.id}`}
+                        title={template.label}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </Button>
+                    );
+                  })}
+                </div>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
             <div className="mt-auto p-3 space-y-2">
               <Button
                 variant="outline"
@@ -599,16 +871,24 @@ export default function DashboardPage() {
         </Sidebar>
 
         <div className="flex flex-col flex-1 min-w-0">
-          <header className="sticky top-0 z-50 bg-background border-b">
+          <header className="sticky top-0 z-50 bg-background border-b flex-shrink-0">
             <div className="h-[2px] w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500" />
             <div className="flex items-center justify-between gap-2 px-4 py-2">
             <div className="flex items-center gap-2">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <h1 className="text-sm font-semibold truncate">{dataset.name}</h1>
-              <Badge variant="secondary" className="text-[10px] bg-gradient-to-r from-pink-500/10 to-purple-500/10 dark:from-pink-500/20 dark:to-purple-500/20">
-                <GripVertical className="w-2.5 h-2.5 mr-0.5" />
-                Drag to rearrange
-              </Badge>
+              {dashboardMetrics.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-[10px] h-6 px-2"
+                  onClick={() => setMetricsVisible(!metricsVisible)}
+                  data-testid="button-toggle-metrics"
+                >
+                  {metricsVisible ? <EyeOff className="w-3 h-3 mr-1" /> : <Eye className="w-3 h-3 mr-1" />}
+                  Metrics
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <DropdownMenu>
@@ -665,10 +945,13 @@ export default function DashboardPage() {
             </div>
           </header>
 
-          <main className="flex-1 overflow-hidden flex">
-            <div className={`flex-1 min-w-0 overflow-y-auto p-4 space-y-4 ${chatOpen ? "max-w-[calc(100%-380px)]" : ""}`} ref={dashboardRef}>
+          <main className="flex-1 overflow-hidden flex" ref={mainAreaRef}>
+            <div
+              className={`flex-1 min-w-0 overflow-hidden flex flex-col ${chatOpen ? "max-w-[calc(100%-380px)]" : ""}`}
+              ref={dashboardRef}
+            >
               {dashLoading && initialMode === "auto" ? (
-                <>
+                <div className="p-4 space-y-4">
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     {[1, 2, 3, 4].map((i) => (
                       <Card key={i} className="p-4">
@@ -685,122 +968,134 @@ export default function DashboardPage() {
                       </Card>
                     ))}
                   </div>
-                </>
+                </div>
               ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-4"
-                >
+                <>
                   {showManualBuilder && (
-                    <ManualChartBuilder
-                      columns={columns}
-                      datasetId={datasetId}
-                      onChartCreated={handleManualChartCreated}
-                    />
-                  )}
-
-                  {dashboardMetrics.length > 0 && (
-                    <div className="p-3 rounded-md bg-gradient-to-r from-pink-500/5 via-transparent to-purple-500/5 dark:from-pink-500/10 dark:to-purple-500/10">
-                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                        {dashboardMetrics.map((m, i) => (
-                          <MetricCard key={i} metric={m} />
-                        ))}
-                      </div>
+                    <div className="px-4 pt-3 flex-shrink-0">
+                      <ManualChartBuilder
+                        columns={columns}
+                        datasetId={datasetId}
+                        onChartCreated={handleManualChartCreated}
+                      />
                     </div>
                   )}
 
-                  {dashboardCharts.length > 0 ? (
-                    <div ref={gridContainerRef}>
-                    <ResponsiveGridLayout
-                      className="layout"
-                      layouts={currentLayouts}
-                      breakpoints={{ lg: 1200, md: 800, sm: 480 }}
-                      cols={{ lg: 12, md: 12, sm: 12 }}
-                      rowHeight={80}
-                      width={gridWidth}
-                      onLayoutChange={handleLayoutChange}
-                      draggableHandle=".drag-handle"
-                      resizeHandles={["se"] as any}
-                      margin={[12, 12] as [number, number]}
-                      containerPadding={[0, 0] as [number, number]}
-                    >
-                      {dashboardCharts.map((chart, i) => (
-                        <div key={String(i)} data-testid={`chart-grid-item-${i}`} style={{ overflow: "visible" }}>
-                          <Card className="h-full flex flex-col overflow-visible relative group transition-shadow duration-200 hover:shadow-md">
-                            <div className="drag-handle flex items-center gap-2 px-3 py-2 border-b cursor-grab active:cursor-grabbing bg-gradient-to-r from-pink-500/5 to-purple-500/5 dark:from-pink-500/10 dark:to-purple-500/10">
-                              <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
-                              <span className="text-xs font-medium truncate flex-1">{chart.title}</span>
-                            </div>
-                            <div className="flex-1 min-h-0 overflow-hidden">
-                              <ChartCard
-                                chart={chart}
-                                onSliceClick={handleSliceClick}
-                                onRemove={() => handleRemoveChart(i)}
-                                showControls
-                                noCard
-                              />
-                            </div>
-                          </Card>
+                  {metricsVisible && dashboardMetrics.length > 0 && (
+                    <div className="px-4 pt-3 flex-shrink-0">
+                      <div className="p-3 rounded-md bg-gradient-to-r from-pink-500/5 via-transparent to-purple-500/5 dark:from-pink-500/10 dark:to-purple-500/10">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                          {dashboardMetrics.map((m, i) => (
+                            <MetricCard key={i} metric={m} />
+                          ))}
                         </div>
-                      ))}
-                    </ResponsiveGridLayout>
-                    </div>
-                  ) : initialMode === "manual" && !showManualBuilder ? (
-                    <Card className="p-8 text-center">
-                      <LayoutGrid className="w-8 h-8 text-primary mx-auto mb-3" />
-                      <h3 className="font-medium mb-1">Manual Dashboard Mode</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Use the chart builder to create your own visualizations, or ask the AI to create them for you
-                      </p>
-                      <div className="flex items-center justify-center gap-2 flex-wrap">
-                        <Button onClick={() => setShowManualBuilder(true)} data-testid="button-open-builder">
-                          <Plus className="w-4 h-4 mr-1" />
-                          Add Chart
-                        </Button>
-                        <Button variant="outline" onClick={() => setChatOpen(true)} data-testid="button-open-chat-manual">
-                          <MessageSquare className="w-4 h-4 mr-1" />
-                          Ask AI
-                        </Button>
                       </div>
-                    </Card>
-                  ) : !dashLoading && initialMode === "auto" ? (
-                    <Card className="p-8 text-center">
-                      <Sparkles className="w-8 h-8 text-primary mx-auto mb-3" />
-                      <h3 className="font-medium mb-1">Generating dashboard...</h3>
-                      <p className="text-sm text-muted-foreground">
-                        AI is analyzing your data and creating visualizations
-                      </p>
-                    </Card>
-                  ) : null}
+                    </div>
+                  )}
+
+                  <div className="flex-1 min-h-0 px-4 pt-3 pb-2" ref={gridContainerRef}>
+                    {dashboardCharts.length > 0 ? (
+                      <ResponsiveGridLayout
+                        className="layout"
+                        layouts={currentLayouts}
+                        breakpoints={{ lg: 1200, md: 800, sm: 480 }}
+                        cols={{ lg: 12, md: 12, sm: 12 }}
+                        rowHeight={dynamicRowHeight}
+                        width={gridWidth}
+                        onLayoutChange={handleLayoutChange}
+                        draggableHandle=".drag-handle"
+                        resizeHandles={["se"] as any}
+                        margin={[8, 8] as [number, number]}
+                        containerPadding={[0, 0] as [number, number]}
+                        compactType="vertical"
+                        isResizable={true}
+                        isDraggable={true}
+                      >
+                        {dashboardCharts.map((chart, i) => (
+                          <div key={String(i)} data-testid={`chart-grid-item-${i}`} style={{ overflow: "visible" }}>
+                            <Card className="h-full flex flex-col overflow-visible relative group transition-shadow duration-200 hover:shadow-md">
+                              <div className="drag-handle flex items-center gap-2 px-3 py-1.5 border-b cursor-grab active:cursor-grabbing bg-gradient-to-r from-pink-500/5 to-purple-500/5 dark:from-pink-500/10 dark:to-purple-500/10 flex-shrink-0">
+                                <GripVertical className="w-3 h-3 text-muted-foreground" />
+                                <span className="text-[11px] font-medium truncate flex-1">{chart.title}</span>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                  onClick={() => handleRemoveChart(i)}
+                                  data-testid={`button-remove-chart-${i}`}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </div>
+                              <div className="flex-1 min-h-0 overflow-hidden p-1">
+                                <ChartCard
+                                  chart={chart}
+                                  onSliceClick={handleSliceClick}
+                                  showControls={false}
+                                  noCard
+                                  fillHeight
+                                />
+                              </div>
+                            </Card>
+                          </div>
+                        ))}
+                      </ResponsiveGridLayout>
+                    ) : initialMode === "manual" && !showManualBuilder ? (
+                      <div className="flex items-center justify-center h-full">
+                        <Card className="p-8 text-center max-w-sm">
+                          <LayoutGrid className="w-8 h-8 text-primary mx-auto mb-3" />
+                          <h3 className="font-medium mb-1">Manual Dashboard Mode</h3>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Use the chart builder to create your own visualizations, or ask the AI to create them for you
+                          </p>
+                          <div className="flex items-center justify-center gap-2 flex-wrap">
+                            <Button onClick={() => setShowManualBuilder(true)} data-testid="button-open-builder">
+                              <Plus className="w-4 h-4 mr-1" />
+                              Add Chart
+                            </Button>
+                            <Button variant="outline" onClick={() => setChatOpen(true)} data-testid="button-open-chat-manual">
+                              <MessageSquare className="w-4 h-4 mr-1" />
+                              Ask AI
+                            </Button>
+                          </div>
+                        </Card>
+                      </div>
+                    ) : !dashLoading && initialMode === "auto" && dashboardCharts.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <Card className="p-8 text-center">
+                          <Sparkles className="w-8 h-8 text-primary mx-auto mb-3" />
+                          <h3 className="font-medium mb-1">Generating dashboard...</h3>
+                          <p className="text-sm text-muted-foreground">
+                            AI is analyzing your data and creating visualizations
+                          </p>
+                        </Card>
+                      </div>
+                    ) : null}
+                  </div>
 
                   {suggestions.length > 0 && (
-                    <Card className="p-4 bg-gradient-to-r from-pink-500/5 via-transparent to-purple-500/5 dark:from-pink-500/10 dark:to-purple-500/10">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Sparkles className="w-4 h-4 text-pink-500" />
-                        <h3 className="text-sm font-medium">Suggested analyses</h3>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {suggestions.map((s, i) => (
+                    <div className="px-4 pb-2 flex-shrink-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Sparkles className="w-3.5 h-3.5 text-pink-500 flex-shrink-0" />
+                        {suggestions.slice(0, 3).map((s, i) => (
                           <Button
                             key={i}
                             variant="outline"
                             size="sm"
-                            className="text-xs"
+                            className="text-[10px] h-6 px-2"
                             onClick={() => {
                               setChatOpen(true);
                               handleSendMessage(s);
                             }}
                             data-testid={`button-dashboard-suggestion-${i}`}
                           >
-                            {s}
+                            {s.length > 40 ? s.slice(0, 40) + "..." : s}
                           </Button>
                         ))}
                       </div>
-                    </Card>
+                    </div>
                   )}
-                </motion.div>
+                </>
               )}
             </div>
 
@@ -818,6 +1113,7 @@ export default function DashboardPage() {
                   messages={chatMessages}
                   onSendMessage={handleSendMessage}
                   onSliceClick={handleSliceClick}
+                  onAddChartToDashboard={handleAddChartFromChat}
                   isLoading={isAiLoading}
                   suggestions={suggestions}
                   pinnedChart={pinnedChart}

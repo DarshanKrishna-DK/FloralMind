@@ -14,7 +14,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import type { ChartConfig } from "@shared/schema";
-import { Maximize2, X } from "lucide-react";
+import { Maximize2, X, Plus } from "lucide-react";
 
 const CHART_COLORS = [
   "hsl(330, 60%, 45%)",
@@ -34,15 +34,17 @@ interface ChartCardProps {
   onSliceClick?: (data: Record<string, unknown>) => void;
   onRemove?: () => void;
   onChartTypeChange?: (newType: ChartType) => void;
+  onAddToDashboard?: (chart: ChartConfig) => void;
   compact?: boolean;
   showControls?: boolean;
   noCard?: boolean;
+  fillHeight?: boolean;
 }
 
-export function ChartCard({ chart, onSliceClick, onRemove, onChartTypeChange, compact = false, showControls = true, noCard = false }: ChartCardProps) {
+export function ChartCard({ chart, onSliceClick, onRemove, onChartTypeChange, onAddToDashboard, compact = false, showControls = true, noCard = false, fillHeight = false }: ChartCardProps) {
   const [chartType, setChartType] = useState<ChartType>(chart.type as ChartType);
   const colors = chart.colors || CHART_COLORS;
-  const height = compact ? 200 : 280;
+  const height = fillHeight ? "100%" : compact ? 200 : 280;
 
   const handleTypeChange = (newType: ChartType) => {
     setChartType(newType);
@@ -169,6 +171,18 @@ export function ChartCard({ chart, onSliceClick, onRemove, onChartTypeChange, co
         <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
           <h3 className="text-sm font-medium flex-1 min-w-0">{chart.title}</h3>
           <div className="flex items-center gap-1 flex-shrink-0">
+            {onAddToDashboard && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs"
+                onClick={() => onAddToDashboard(chart)}
+                data-testid="button-add-to-dashboard"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add to Dashboard
+              </Button>
+            )}
             {showControls && !compact && (
               <Select value={chartType} onValueChange={(v) => handleTypeChange(v as ChartType)}>
                 <SelectTrigger className="h-7 text-xs w-[90px]" data-testid="select-chart-type">

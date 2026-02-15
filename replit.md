@@ -72,6 +72,11 @@ FloralMind is a production-grade conversational analytics platform that transfor
 - Dark mode supported via class-based toggle
 
 ## Recent Changes
+- 2026-02-15: Added layout template selector in sidebar (5 presets: 2-col, 3-col, featured, rows, mixed)
+- 2026-02-15: Dashboard fits viewport without scrolling (dynamic rowHeight, PowerBI/Tableau style)
+- 2026-02-15: Chat charts require explicit "Add to Dashboard" button (no auto-add)
+- 2026-02-15: Fixed PNG/PDF export to capture full dashboard content properly
+- 2026-02-15: Updated logo imports to use latest cropped versions
 - 2026-02-15: Added Supabase database connection as data source option alongside CSV upload
 - 2026-02-15: Created supabase-service.ts for table discovery and data import via @supabase/supabase-js
 - 2026-02-15: Added API endpoints: POST /api/supabase/tables (list tables), POST /api/supabase/import (import table)
