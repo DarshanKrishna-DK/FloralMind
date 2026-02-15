@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,6 +19,7 @@ interface ChatPanelProps {
   suggestions?: string[];
   pinnedChart?: ChartConfig | null;
   onClearPinnedChart?: () => void;
+  chatOpen?: boolean;
 }
 
 export function ChatPanel({
@@ -33,6 +33,7 @@ export function ChatPanel({
   suggestions = [],
   pinnedChart,
   onClearPinnedChart,
+  chatOpen = true,
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const [addedChartIds, setAddedChartIds] = useState<Set<number>>(new Set());
@@ -150,15 +151,15 @@ export function ChatPanel({
   const activeSuggestions = suggestions.length > 0 ? suggestions : (messages.length === 0 ? defaultSuggestions : []);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-4 py-3 border-b">
+    <div className="flex flex-col h-full w-full sm:w-[400px] min-w-0 overflow-hidden bg-background">
+      <div className="px-4 py-3 border-b flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
             <Sparkles className="w-3.5 h-3.5 text-primary" />
           </div>
-          <div className="flex-1">
-            <h3 className="text-sm font-medium">AI Analytics</h3>
-            <p className="text-xs text-muted-foreground">Ask questions about your data</p>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-medium truncate">AI Analytics</h3>
+            <p className="text-xs text-muted-foreground truncate">Ask questions about your data</p>
           </div>
           <Button
             variant="ghost"
@@ -177,7 +178,7 @@ export function ChatPanel({
       </div>
 
       {pinnedChart && (
-        <div className="px-3 pt-3 pb-1">
+        <div className="px-3 pt-3 pb-1 flex-shrink-0">
           <div className="flex items-center justify-between gap-2 mb-1">
             <span className="text-xs text-muted-foreground font-medium">Pinned Chart</span>
             <Button size="icon" variant="ghost" onClick={onClearPinnedChart} data-testid="button-unpin-chart">
@@ -188,15 +189,15 @@ export function ChatPanel({
         </div>
       )}
 
-      <ScrollArea className="flex-1 px-4" ref={scrollRef as any}>
-        <div className="py-4 space-y-4">
+      <ScrollArea className="flex-1 min-h-0" ref={scrollRef as any}>
+        <div className="px-4 py-4 space-y-4">
           {messages.length === 0 && !isLoading && (
             <div className="text-center py-8">
               <div className="w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center mx-auto mb-3">
                 <Bot className="w-6 h-6 text-primary" />
               </div>
               <p className="text-sm font-medium mb-1">Ready to explore your data</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground px-2">
                 Ask questions, request charts, or click on visualizations to drill deeper
               </p>
             </div>
@@ -216,11 +217,11 @@ export function ChatPanel({
                   </div>
                 )}
                 <div
-                  className="max-w-[85%] space-y-2"
+                  className="max-w-[85%] min-w-0 space-y-2"
                   data-testid={`message-${msg.role}-${msg.id}`}
                 >
                   <div
-                    className={`rounded-md px-3 py-2 text-sm leading-relaxed ${
+                    className={`rounded-md px-3 py-2 text-sm leading-relaxed break-words ${
                       msg.role === "user"
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted"
@@ -277,11 +278,11 @@ export function ChatPanel({
                           key={i}
                           variant="outline"
                           size="sm"
-                          className="text-xs"
+                          className="text-xs max-w-full"
                           onClick={() => handleSuggestionClick(s)}
                           data-testid={`button-suggestion-${i}`}
                         >
-                          {s}
+                          <span className="truncate">{s}</span>
                         </Button>
                       ))}
                     </div>
@@ -314,26 +315,26 @@ export function ChatPanel({
       </ScrollArea>
 
       {activeSuggestions.length > 0 && messages.length === 0 && (
-        <div className="px-4 pb-2">
-          <div className="flex flex-wrap gap-1.5">
+        <div className="px-3 pb-2 flex-shrink-0 max-h-[30vh] overflow-y-auto">
+          <div className="flex flex-col gap-1.5">
             {activeSuggestions.map((s, i) => (
               <Button
                 key={i}
                 variant="outline"
                 size="sm"
-                className="text-xs"
+                className="text-xs justify-start text-left w-full"
                 onClick={() => handleSuggestionClick(s)}
                 data-testid={`button-default-suggestion-${i}`}
               >
-                <Sparkles className="w-3 h-3 mr-1" />
-                {s}
+                <Sparkles className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                <span className="truncate">{s}</span>
               </Button>
             ))}
           </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="p-4 border-t">
+      <form onSubmit={handleSubmit} className="p-3 border-t flex-shrink-0">
         {isListening && (
           <div className="flex items-center gap-2 mb-2 px-2 py-1.5 rounded-md bg-primary/5 border border-primary/20">
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
@@ -346,7 +347,7 @@ export function ChatPanel({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask about your data..."
-            className="resize-none text-sm min-h-[40px] max-h-[120px]"
+            className="resize-none text-sm min-h-[40px] max-h-[100px] flex-1"
             rows={1}
             disabled={isLoading}
             data-testid="input-chat"

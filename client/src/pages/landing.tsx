@@ -8,7 +8,7 @@ import {
   Download, Layers, BrainCircuit, TrendingUp, Zap, Shield, Globe,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import logoWithText from "@assets/ChatGPT_Image_Feb_15,_2026,_11_16_42_AM_1771145168684.png";
+import logoWithText from "@assets/ChatGPT_Image_Feb_15,_2026,_03_59_07_PM_1771151367873.png";
 import heroVideo from "@assets/SaaS_Product_Demo_Video_Generation_1771140201051.mp4";
 
 function FloatingOrbs() {
@@ -112,7 +112,7 @@ export default function LandingPage() {
       <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 px-6 py-3">
           <div className="flex items-center gap-3">
-            <img src={logoWithText} alt="FloralMind" className="h-7 object-contain" />
+            <img src={logoWithText} alt="FloralMind" className="h-10 object-contain" />
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -339,7 +339,7 @@ export default function LandingPage() {
       <footer className="border-t py-8 px-6">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <img src={logoWithText} alt="FloralMind" className="h-6 object-contain" />
+            <img src={logoWithText} alt="FloralMind" className="h-9 object-contain" />
           </div>
           <div className="flex items-center gap-4 flex-wrap">
             <span className="text-xs text-muted-foreground italic">Dashboards that think</span>

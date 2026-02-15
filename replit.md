@@ -82,6 +82,11 @@ FloralMind is a production-grade conversational analytics platform that transfor
 - 2026-02-15: Dashboard fits viewport without scrolling (dynamic rowHeight, PowerBI/Tableau style)
 - 2026-02-15: Chat charts require explicit "Add to Dashboard" button (no auto-add)
 - 2026-02-15: Fixed PNG/PDF export to capture full dashboard content properly
+- 2026-02-15: Updated logos to new brain-leaf icon (without text) and FloralMind wordmark (with text) versions
+- 2026-02-15: Fixed layout template buttons: buildAllBreakpoints scales layouts proportionally across lg/md/sm/xs/xxs
+- 2026-02-15: Grid remounts on layout change (key prop) with skipNextLayoutChange guard to prevent override
+- 2026-02-15: Fixed metrics-to-charts spacing (mb-6) and ensured both share same width wrapper
+- 2026-02-15: Chat panel rewritten: proper flex structure, responsive mobile overlay, no overflow
 - 2026-02-15: Updated logo imports to use latest cropped versions
 - 2026-02-15: Added Supabase database connection as data source option alongside CSV upload
 - 2026-02-15: Created supabase-service.ts for table discovery and data import via @supabase/supabase-js

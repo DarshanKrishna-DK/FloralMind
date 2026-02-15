@@ -46,11 +46,11 @@ import { ChatPanel } from "@/components/chat-panel";
 import { ManualChartBuilder } from "@/components/manual-chart-builder";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { Dataset, Message, ChartConfig, DashboardMetric, AIResponse, ColumnInfo } from "@shared/schema";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ResponsiveGridLayout as RGLBase } from "react-grid-layout";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import logoIcon from "@assets/ChatGPT_Image_Feb_15,_2026,_11_17_44_AM_1771145176190.png";
+import logoIcon from "@assets/ChatGPT_Image_Feb_15,_2026,_03_56_17_PM_1771151200056.png";
 
 const ResponsiveGridLayout = RGLBase as any;
 
@@ -274,7 +274,7 @@ export default function DashboardPage() {
           minW: 3,
           minH: 3,
         }));
-        setGridLayouts({ lg: layout, md: layout, sm: layout.map(l => ({ ...l, x: 0, w: 12 })) });
+        setGridLayouts(buildAllBreakpoints(layout));
       }
     }
   }, [initialDashboard]);
@@ -309,61 +309,67 @@ export default function DashboardPage() {
   }, []);
 
   const dynamicRowHeight = useMemo(() => {
-    const headerHeight = 44;
-    const metricsHeight = metricsVisible && dashboardMetrics.length > 0 ? 90 : 0;
-    const padding = 32;
-    const usable = availableHeight - headerHeight - metricsHeight - padding;
+    return 100; // Fixed row height for natural scrolling
+  }, []);
 
-    if (dashboardCharts.length === 0) return 60;
-
-    const template = LAYOUT_TEMPLATES.find((t) => t.id === selectedLayout);
-    if (!template) return 60;
-
-    const layout = template.getLayout(dashboardCharts.length);
-    const maxRow = layout.reduce((max, item) => Math.max(max, item.y + item.h), 0);
-
-    if (maxRow === 0) return 60;
-
-    const marginRows = Math.max(maxRow - 1, 0) * 12;
-    const rowHeight = Math.max((usable - marginRows) / maxRow, 30);
-    return Math.min(rowHeight, 100);
-  }, [availableHeight, metricsVisible, dashboardMetrics.length, dashboardCharts.length, selectedLayout]);
+  const buildAllBreakpoints = useCallback((layout: GridLayout[]) => {
+    const scaleLayout = (items: GridLayout[], maxCols: number): GridLayout[] => {
+      const ratio = maxCols / 12;
+      const scaled: GridLayout[] = [];
+      for (const l of items) {
+        const w = Math.max(Math.round(l.w * ratio), l.minW || 2);
+        const x = Math.min(Math.round(l.x * ratio), maxCols - w);
+        scaled.push({ ...l, w, x: Math.max(0, x), minW: Math.min(l.minW || 2, maxCols) });
+      }
+      return scaled;
+    };
+    const stackLayout = (items: GridLayout[], cols: number): GridLayout[] => {
+      return items.map((l, i) => ({ ...l, x: 0, y: i * (l.h || 4), w: cols, minW: 1 }));
+    };
+    return {
+      lg: layout,
+      md: scaleLayout(layout, 10),
+      sm: scaleLayout(layout, 6),
+      xs: stackLayout(layout, 4),
+      xxs: stackLayout(layout, 2),
+    };
+  }, []);
 
   const applyLayoutTemplate = useCallback((templateId: string, chartCount: number) => {
     const template = LAYOUT_TEMPLATES.find((t) => t.id === templateId);
     if (!template || chartCount === 0) return;
     const layout = template.getLayout(chartCount);
-    setGridLayouts({
-      lg: layout,
-      md: layout,
-      sm: layout.map((l) => ({ ...l, x: 0, w: 12 })),
-    });
-  }, []);
+    setGridLayouts(buildAllBreakpoints(layout));
+  }, [buildAllBreakpoints]);
+
+  const layoutVersionRef = useRef(0);
+  const skipNextLayoutChange = useRef(false);
 
   const handleLayoutSelect = useCallback((templateId: string) => {
     setSelectedLayout(templateId);
+    layoutVersionRef.current += 1;
+    skipNextLayoutChange.current = true;
     applyLayoutTemplate(templateId, dashboardCharts.length);
   }, [dashboardCharts.length, applyLayoutTemplate]);
 
   const handleLayoutChange = useCallback((_layout: any, allLayouts: any) => {
+    if (skipNextLayoutChange.current) {
+      skipNextLayoutChange.current = false;
+      return;
+    }
     setGridLayouts(allLayouts);
   }, []);
 
   const addChartToGrid = useCallback((chart: ChartConfig) => {
     setDashboardCharts((prev) => {
       const newCharts = [...prev, chart];
-      const newIndex = newCharts.length - 1;
       const template = LAYOUT_TEMPLATES.find((t) => t.id === selectedLayout);
       if (template) {
         const newLayout = template.getLayout(newCharts.length);
-        setGridLayouts((prevLayouts) => ({
-          lg: newLayout,
-          md: newLayout,
-          sm: newLayout.map((l) => ({ ...l, x: 0, w: 12 })),
-        }));
+        setGridLayouts(buildAllBreakpoints(newLayout));
       } else {
         const newItem: GridLayout = {
-          i: String(newIndex),
+          i: String(newCharts.length - 1),
           x: 0,
           y: Infinity,
           w: 6,
@@ -373,13 +379,12 @@ export default function DashboardPage() {
         };
         setGridLayouts((prevLayouts) => {
           const lgLayout = [...(prevLayouts.lg || []), newItem];
-          const smLayout = [...(prevLayouts.sm || []), { ...newItem, w: 12, x: 0 }];
-          return { ...prevLayouts, lg: lgLayout, md: lgLayout, sm: smLayout };
+          return buildAllBreakpoints(lgLayout);
         });
       }
       return newCharts;
     });
-  }, [selectedLayout]);
+  }, [selectedLayout, buildAllBreakpoints]);
 
   const handleSendMessage = useCallback(async (content: string) => {
     const userMessage: Message = {
@@ -456,17 +461,13 @@ export default function DashboardPage() {
       const template = LAYOUT_TEMPLATES.find((t) => t.id === selectedLayout);
       if (template && newCharts.length > 0) {
         const newLayout = template.getLayout(newCharts.length);
-        setGridLayouts({
-          lg: newLayout,
-          md: newLayout,
-          sm: newLayout.map((l) => ({ ...l, x: 0, w: 12 })),
-        });
+        setGridLayouts(buildAllBreakpoints(newLayout));
       } else {
         setGridLayouts({});
       }
       return newCharts;
     });
-  }, [selectedLayout]);
+  }, [selectedLayout, buildAllBreakpoints]);
 
   const handleManualChartCreated = useCallback((chart: ChartConfig) => {
     addChartToGrid(chart);
@@ -749,10 +750,10 @@ export default function DashboardPage() {
     const template = LAYOUT_TEMPLATES.find((t) => t.id === selectedLayout);
     if (template) {
       const layout = template.getLayout(dashboardCharts.length);
-      return { lg: layout, md: layout, sm: layout.map((l) => ({ ...l, x: 0, w: 12 })) };
+      return buildAllBreakpoints(layout);
     }
-    return { lg: [], md: [], sm: [] };
-  }, [gridLayouts, dashboardCharts.length, selectedLayout]);
+    return { lg: [], md: [], sm: [], xs: [], xxs: [] };
+  }, [gridLayouts, dashboardCharts.length, selectedLayout, buildAllBreakpoints]);
 
   const sidebarStyle = {
     "--sidebar-width": "14rem",
@@ -822,38 +823,41 @@ export default function DashboardPage() {
               </SidebarGroupContent>
             </SidebarGroup>
 
-            <SidebarGroup>
+                <SidebarGroup>
               <SidebarGroupLabel>Columns</SidebarGroupLabel>
               <SidebarGroupContent>
-                <div className="px-1 space-y-0.5 max-h-48 overflow-y-auto">
+                <div className="px-1 space-y-0.5 max-h-[30vh] overflow-y-auto">
                   {columns.map((col) => (
                     <SidebarMenu key={col.name}>
                       <SidebarMenuItem>
                         <SidebarMenuButton
-                          onClick={() => handleColumnClick(col.name)}
+                          onClick={() => {
+                            console.log("Column clicked:", col.name);
+                            handleColumnClick(col.name);
+                          }}
                           data-testid={`column-${col.name}`}
-                          className="py-1"
+                          className="py-1 w-full justify-start gap-2 hover:bg-primary/5 transition-colors"
                         >
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0">
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0 min-w-[32px] justify-center">
                             {col.type === "numeric" ? "num" : col.type === "date" ? "date" : "txt"}
                           </Badge>
-                          <span className="text-xs truncate">{col.name}</span>
+                          <span className="text-xs truncate font-medium">{col.name}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     </SidebarMenu>
                   ))}
-                  <div className="px-2 pt-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full text-xs justify-start"
-                      onClick={handleViewFullTable}
-                      data-testid="button-view-full-table"
-                    >
-                      <Table2 className="w-3 h-3 mr-1" />
-                      View Full Table
-                    </Button>
-                  </div>
+                </div>
+                <div className="px-2 pt-2 border-t mt-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs justify-start"
+                    onClick={handleViewFullTable}
+                    data-testid="button-view-full-table"
+                  >
+                    <Table2 className="w-3 h-3 mr-1" />
+                    View Full Table
+                  </Button>
                 </div>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -982,12 +986,13 @@ export default function DashboardPage() {
             </div>
           </header>
 
-          <main className="flex-1 overflow-hidden flex" ref={mainAreaRef}>
+          <main className="flex-1 flex flex-col sm:flex-row overflow-hidden" ref={mainAreaRef}>
             <div
-              className={`flex-1 min-w-0 overflow-hidden flex flex-col ${chatOpen ? "max-w-[calc(100%-380px)]" : ""}`}
+              className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden flex flex-col h-full"
               ref={dashboardRef}
             >
-              {dashLoading && initialMode === "auto" ? (
+              <div className="w-full p-4 sm:p-5 lg:p-6">
+                {dashLoading && initialMode === "auto" ? (
                 <div className="p-4 space-y-4">
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     {[1, 2, 3, 4].map((i) => (
@@ -1009,7 +1014,7 @@ export default function DashboardPage() {
               ) : (
                 <>
                   {showManualBuilder && (
-                    <div className="px-4 pt-3 flex-shrink-0">
+                    <div className="mb-4 flex-shrink-0">
                       <ManualChartBuilder
                         columns={columns}
                         datasetId={datasetId}
@@ -1019,34 +1024,34 @@ export default function DashboardPage() {
                   )}
 
                   {metricsVisible && dashboardMetrics.length > 0 && (
-                    <div className="px-4 pt-3 flex-shrink-0">
-                      <div className="p-3 rounded-md bg-gradient-to-r from-pink-500/5 via-transparent to-purple-500/5 dark:from-pink-500/10 dark:to-purple-500/10">
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                          {dashboardMetrics.map((m, i) => (
-                            <MetricCard key={i} metric={m} />
-                          ))}
-                        </div>
+                    <div className="mb-6 flex-shrink-0">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {dashboardMetrics.map((m, i) => (
+                          <MetricCard key={i} metric={m} />
+                        ))}
                       </div>
                     </div>
                   )}
 
-                  <div className="flex-1 min-h-0 px-4 pt-3 pb-2" ref={gridContainerRef}>
+                  <div className="w-full" ref={gridContainerRef}>
                     {dashboardCharts.length > 0 ? (
                       <ResponsiveGridLayout
+                        key={`${selectedLayout}-${dashboardCharts.length}`}
                         className="layout"
                         layouts={currentLayouts}
-                        breakpoints={{ lg: 1200, md: 800, sm: 480 }}
-                        cols={{ lg: 12, md: 12, sm: 12 }}
-                        rowHeight={dynamicRowHeight}
+                        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                        cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+                        rowHeight={100}
                         width={gridWidth}
                         onLayoutChange={handleLayoutChange}
                         draggableHandle=".drag-handle"
-                        resizeHandles={["se"] as any}
-                        margin={[8, 8] as [number, number]}
+                        resizeHandles={["se", "sw", "ne", "nw", "e", "w", "n", "s"] as any}
+                        margin={[16, 16] as [number, number]}
                         containerPadding={[0, 0] as [number, number]}
                         compactType="vertical"
                         isResizable={true}
                         isDraggable={true}
+                        useCSSTransforms={true}
                       >
                         {dashboardCharts.map((chart, i) => (
                           <div key={String(i)} data-testid={`chart-grid-item-${i}`} style={{ overflow: "visible" }}>
@@ -1070,7 +1075,7 @@ export default function DashboardPage() {
                                     <EChartCard
                                       chart={chart}
                                       onSliceClick={handleSliceClick}
-                                      showControls={false}
+                                      showControls={true}
                                       noCard
                                       fillHeight
                                     />
@@ -1079,7 +1084,7 @@ export default function DashboardPage() {
                                   <ChartCard
                                     chart={chart}
                                     onSliceClick={handleSliceClick}
-                                    showControls={false}
+                                    showControls={true}
                                     noCard
                                     fillHeight
                                   />
@@ -1146,30 +1151,54 @@ export default function DashboardPage() {
                   )}
                 </>
               )}
+              </div>
             </div>
 
+            <AnimatePresence>
+              {chatOpen && (
+                <motion.div
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 400, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="flex-shrink-0 h-full overflow-hidden hidden sm:block"
+                >
+                  <ChatPanel
+                    datasetId={datasetId}
+                    messages={chatMessages}
+                    confidenceScores={confidenceScores}
+                    onSendMessage={handleSendMessage}
+                    onSliceClick={handleSliceClick}
+                    onAddChartToDashboard={handleAddChartFromChat}
+                    isLoading={isAiLoading}
+                    suggestions={suggestions}
+                    pinnedChart={pinnedChart}
+                    onClearPinnedChart={() => setPinnedChart(null)}
+                    chatOpen={chatOpen}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {chatOpen && (
-              <motion.div
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: 380, opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="border-l flex-shrink-0 h-full"
-                style={{ width: 380 }}
-              >
-                <ChatPanel
-                  datasetId={datasetId}
-                  messages={chatMessages}
-                  confidenceScores={confidenceScores}
-                  onSendMessage={handleSendMessage}
-                  onSliceClick={handleSliceClick}
-                  onAddChartToDashboard={handleAddChartFromChat}
-                  isLoading={isAiLoading}
-                  suggestions={suggestions}
-                  pinnedChart={pinnedChart}
-                  onClearPinnedChart={() => setPinnedChart(null)}
-                />
-              </motion.div>
+              <div className="fixed inset-0 z-[90] sm:hidden">
+                <div className="absolute inset-0 bg-black/50" onClick={() => setChatOpen(false)} />
+                <div className="absolute inset-y-0 right-0 w-full max-w-[400px] bg-background shadow-2xl">
+                  <ChatPanel
+                    datasetId={datasetId}
+                    messages={chatMessages}
+                    confidenceScores={confidenceScores}
+                    onSendMessage={handleSendMessage}
+                    onSliceClick={handleSliceClick}
+                    onAddChartToDashboard={handleAddChartFromChat}
+                    isLoading={isAiLoading}
+                    suggestions={suggestions}
+                    pinnedChart={pinnedChart}
+                    onClearPinnedChart={() => setPinnedChart(null)}
+                    chatOpen={chatOpen}
+                  />
+                </div>
+              </div>
             )}
           </main>
         </div>

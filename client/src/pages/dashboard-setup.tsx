@@ -14,7 +14,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { motion } from "framer-motion";
 import type { Dataset } from "@shared/schema";
-import logoIcon from "@assets/ChatGPT_Image_Feb_15,_2026,_11_16_42_AM_1771145168684.png";
+import logoWithText from "@assets/ChatGPT_Image_Feb_15,_2026,_03_59_07_PM_1771151367873.png";
 
 interface DashboardConfig {
   chartCount: number;
@@ -115,7 +115,7 @@ export default function DashboardSetup() {
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <img src={logoIcon} alt="FloralMind" className="h-7 object-contain" />
+          <img src={logoWithText} alt="FloralMind" className="h-7 object-contain" />
         </div>
         <ThemeToggle />
       </header>
