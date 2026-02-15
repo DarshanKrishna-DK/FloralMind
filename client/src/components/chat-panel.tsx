@@ -20,6 +20,7 @@ interface ChatPanelProps {
   suggestions?: string[];
   pinnedChart?: ChartConfig | null;
   onClearPinnedChart?: () => void;
+  chatOpen?: boolean;
 }
 
 export function ChatPanel({
@@ -33,6 +34,7 @@ export function ChatPanel({
   suggestions = [],
   pinnedChart,
   onClearPinnedChart,
+  chatOpen = true,
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const [addedChartIds, setAddedChartIds] = useState<Set<number>>(new Set());
@@ -150,8 +152,11 @@ export function ChatPanel({
   const activeSuggestions = suggestions.length > 0 ? suggestions : (messages.length === 0 ? defaultSuggestions : []);
 
   return (
-    <div className={`flex flex-col h-full bg-background border-l w-full sm:w-[380px] fixed sm:relative inset-y-0 right-0 z-50 transition-transform duration-300 ${messages.length > 0 || pinnedChart ? "translate-x-0" : "translate-x-full sm:translate-x-0"}`}>
-      <div className="px-4 py-3 border-b">
+    <div className={`flex flex-col h-full bg-background/95 backdrop-blur-sm border-l shadow-xl transition-all duration-300 ease-in-out
+      ${chatOpen ? "w-full sm:w-[400px] translate-x-0" : "w-0 translate-x-full overflow-hidden border-l-0"}
+      fixed sm:relative inset-y-0 right-0 z-[100] sm:z-0`}>
+      <div className="flex flex-col h-full min-w-[320px] sm:min-w-0 overflow-hidden">
+        <div className="px-4 py-3 border-b flex-shrink-0 bg-background/50">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center">
             <Sparkles className="w-3.5 h-3.5 text-primary" />

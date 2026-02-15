@@ -805,28 +805,31 @@ export default function DashboardPage() {
               </SidebarGroupContent>
             </SidebarGroup>
 
-            <SidebarGroup>
+                <SidebarGroup>
               <SidebarGroupLabel>Columns</SidebarGroupLabel>
               <SidebarGroupContent>
-                <div className="px-1 space-y-0.5 max-h-48 overflow-y-auto">
+                <div className="px-1 space-y-0.5 max-h-[30vh] overflow-y-auto">
                   {columns.map((col) => (
                     <SidebarMenu key={col.name}>
                       <SidebarMenuItem>
                         <SidebarMenuButton
-                          onClick={() => handleColumnClick(col.name)}
+                          onClick={() => {
+                            console.log("Column clicked:", col.name);
+                            handleColumnClick(col.name);
+                          }}
                           data-testid={`column-${col.name}`}
-                          className="py-1 w-full justify-start gap-2"
+                          className="py-1 w-full justify-start gap-2 hover:bg-primary/5 transition-colors"
                         >
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0">
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0 min-w-[32px] justify-center">
                             {col.type === "numeric" ? "num" : col.type === "date" ? "date" : "txt"}
                           </Badge>
-                          <span className="text-xs truncate">{col.name}</span>
+                          <span className="text-xs truncate font-medium">{col.name}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     </SidebarMenu>
                   ))}
                 </div>
-                <div className="px-2 pt-1">
+                <div className="px-2 pt-2 border-t mt-1">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -965,12 +968,13 @@ export default function DashboardPage() {
             </div>
           </header>
 
-          <main className="flex-1 overflow-hidden flex flex-col sm:flex-row" ref={mainAreaRef}>
+          <main className="flex-1 flex flex-col sm:flex-row overflow-hidden" ref={mainAreaRef}>
             <div
-              className={`flex-1 min-w-0 overflow-y-auto overflow-x-hidden flex flex-col ${chatOpen ? "sm:max-w-[calc(100%-380px)]" : "w-full"}`}
+              className={`flex-1 min-w-0 overflow-y-auto overflow-x-hidden flex flex-col h-full bg-background/50`}
               ref={dashboardRef}
             >
-              {dashLoading && initialMode === "auto" ? (
+              <div className="w-full max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8">
+                {dashLoading && initialMode === "auto" ? (
                 <div className="p-4 space-y-4">
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     {[1, 2, 3, 4].map((i) => (
@@ -1013,23 +1017,26 @@ export default function DashboardPage() {
                     </div>
                   )}
 
-                  <div className="flex-1 min-h-0 px-4 pt-3 pb-8" ref={gridContainerRef}>
+                  <div className="w-full" ref={gridContainerRef}>
                     {dashboardCharts.length > 0 ? (
                       <ResponsiveGridLayout
                         className="layout"
                         layouts={currentLayouts}
-                        breakpoints={{ lg: 1200, md: 800, sm: 480 }}
-                        cols={{ lg: 12, md: 12, sm: 12 }}
-                        rowHeight={dynamicRowHeight}
+                        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                        cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+                        rowHeight={100}
                         width={gridWidth}
-                        onLayoutChange={handleLayoutChange}
+                        onLayoutChange={(currentLayout: any, allLayouts: any) => {
+                          setGridLayouts(allLayouts);
+                        }}
                         draggableHandle=".drag-handle"
-                        resizeHandles={["se"] as any}
-                        margin={[8, 8] as [number, number]}
+                        resizeHandles={["se", "sw", "nw", "ne", "e", "w", "n", "s"] as any}
+                        margin={[16, 16] as [number, number]}
                         containerPadding={[0, 0] as [number, number]}
                         compactType="vertical"
                         isResizable={true}
                         isDraggable={true}
+                        useCSSTransforms={true}
                       >
                         {dashboardCharts.map((chart, i) => (
                           <div key={String(i)} data-testid={`chart-grid-item-${i}`} style={{ overflow: "visible" }}>
@@ -1134,11 +1141,10 @@ export default function DashboardPage() {
             {chatOpen && (
               <motion.div
                 initial={{ width: 0, opacity: 0 }}
-                animate={{ width: 380, opacity: 1 }}
+                animate={{ width: "auto", opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="border-l flex-shrink-0 h-full"
-                style={{ width: 380 }}
+                className="flex-shrink-0 h-full border-l bg-background/95 backdrop-blur-md"
               >
                 <ChatPanel
                   datasetId={datasetId}
@@ -1151,6 +1157,7 @@ export default function DashboardPage() {
                   suggestions={suggestions}
                   pinnedChart={pinnedChart}
                   onClearPinnedChart={() => setPinnedChart(null)}
+                  chatOpen={chatOpen}
                 />
               </motion.div>
             )}
