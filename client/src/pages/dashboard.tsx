@@ -1025,12 +1025,10 @@ export default function DashboardPage() {
 
                   {metricsVisible && dashboardMetrics.length > 0 && (
                     <div className="mb-6 flex-shrink-0">
-                      <div className="p-4 rounded-md bg-gradient-to-r from-pink-500/5 via-transparent to-purple-500/5 dark:from-pink-500/10 dark:to-purple-500/10">
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                          {dashboardMetrics.map((m, i) => (
-                            <MetricCard key={i} metric={m} />
-                          ))}
-                        </div>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {dashboardMetrics.map((m, i) => (
+                          <MetricCard key={i} metric={m} />
+                        ))}
                       </div>
                     </div>
                   )}
