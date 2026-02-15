@@ -36,9 +36,10 @@ interface ChartCardProps {
   onChartTypeChange?: (newType: ChartType) => void;
   compact?: boolean;
   showControls?: boolean;
+  noCard?: boolean;
 }
 
-export function ChartCard({ chart, onSliceClick, onRemove, onChartTypeChange, compact = false, showControls = true }: ChartCardProps) {
+export function ChartCard({ chart, onSliceClick, onRemove, onChartTypeChange, compact = false, showControls = true, noCard = false }: ChartCardProps) {
   const [chartType, setChartType] = useState<ChartType>(chart.type as ChartType);
   const colors = chart.colors || CHART_COLORS;
   const height = compact ? 200 : 280;
@@ -162,41 +163,76 @@ export function ChartCard({ chart, onSliceClick, onRemove, onChartTypeChange, co
     }
   };
 
-  return (
-    <Card className="p-4" data-testid={`card-chart-${chart.title.toLowerCase().replace(/\s+/g, "-")}`}>
-      <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
-        <h3 className="text-sm font-medium flex-1 min-w-0">{chart.title}</h3>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {showControls && !compact && (
-            <Select value={chartType} onValueChange={(v) => handleTypeChange(v as ChartType)}>
-              <SelectTrigger className="h-7 text-xs w-[90px]" data-testid="select-chart-type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="bar" data-testid="select-chart-type-bar">Bar</SelectItem>
-                <SelectItem value="line" data-testid="select-chart-type-line">Line</SelectItem>
-                <SelectItem value="pie" data-testid="select-chart-type-pie">Pie</SelectItem>
-                <SelectItem value="area" data-testid="select-chart-type-area">Area</SelectItem>
-                <SelectItem value="scatter" data-testid="select-chart-type-scatter">Scatter</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
+  const content = (
+    <>
+      {!noCard && (
+        <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
+          <h3 className="text-sm font-medium flex-1 min-w-0">{chart.title}</h3>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {showControls && !compact && (
+              <Select value={chartType} onValueChange={(v) => handleTypeChange(v as ChartType)}>
+                <SelectTrigger className="h-7 text-xs w-[90px]" data-testid="select-chart-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bar" data-testid="select-chart-type-bar">Bar</SelectItem>
+                  <SelectItem value="line" data-testid="select-chart-type-line">Line</SelectItem>
+                  <SelectItem value="pie" data-testid="select-chart-type-pie">Pie</SelectItem>
+                  <SelectItem value="area" data-testid="select-chart-type-area">Area</SelectItem>
+                  <SelectItem value="scatter" data-testid="select-chart-type-scatter">Scatter</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            {onRemove && (
+              <Button size="icon" variant="ghost" onClick={onRemove} className="flex-shrink-0" data-testid="button-remove-chart">
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            )}
+            {onSliceClick && !onRemove && (
+              <Button size="icon" variant="ghost" className="flex-shrink-0" data-testid="button-expand-chart">
+                <Maximize2 className="w-3.5 h-3.5" />
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+      {noCard && showControls && !compact && (
+        <div className="flex items-center gap-1 justify-end px-3 pt-1">
+          <Select value={chartType} onValueChange={(v) => handleTypeChange(v as ChartType)}>
+            <SelectTrigger className="h-7 text-xs w-[90px]" data-testid="select-chart-type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="bar" data-testid="select-chart-type-bar">Bar</SelectItem>
+              <SelectItem value="line" data-testid="select-chart-type-line">Line</SelectItem>
+              <SelectItem value="pie" data-testid="select-chart-type-pie">Pie</SelectItem>
+              <SelectItem value="area" data-testid="select-chart-type-area">Area</SelectItem>
+              <SelectItem value="scatter" data-testid="select-chart-type-scatter">Scatter</SelectItem>
+            </SelectContent>
+          </Select>
           {onRemove && (
             <Button size="icon" variant="ghost" onClick={onRemove} className="flex-shrink-0" data-testid="button-remove-chart">
               <X className="w-3.5 h-3.5" />
             </Button>
           )}
-          {onSliceClick && !onRemove && (
-            <Button size="icon" variant="ghost" className="flex-shrink-0" data-testid="button-expand-chart">
-              <Maximize2 className="w-3.5 h-3.5" />
-            </Button>
-          )}
         </div>
+      )}
+      <div className={noCard ? "flex-1 min-h-0 px-2 pb-2" : ""}>
+        {renderChart()}
       </div>
-      {renderChart()}
-      {chart.explanation && (
+      {chart.explanation && !noCard && (
         <p className="text-xs text-muted-foreground mt-3 leading-relaxed">{chart.explanation}</p>
       )}
+    </>
+  );
+
+  if (noCard) {
+    return <div className="h-full flex flex-col" data-testid={`card-chart-${chart.title.toLowerCase().replace(/\s+/g, "-")}`}>{content}</div>;
+  }
+
+  return (
+    <Card className="p-4" data-testid={`card-chart-${chart.title.toLowerCase().replace(/\s+/g, "-")}`}>
+      {content}
     </Card>
   );
 }

@@ -70,11 +70,16 @@ FloralMind is a production-grade conversational analytics platform that transfor
 - Dark mode supported via class-based toggle
 
 ## Recent Changes
+- 2026-02-15: Fixed react-grid-layout type compatibility (cast as any for ResponsiveGridLayout)
+- 2026-02-15: Added drag-and-drop resizable dashboard grid via react-grid-layout (ResponsiveGridLayout)
+- 2026-02-15: Added column data preview (click column in sidebar → data table, "View Full Table" button)
+- 2026-02-15: Enhanced AI report dialog with Preview/Raw toggle (react-markdown + remark-gfm)
+- 2026-02-15: Added comprehensive export dropdown: HTML (standalone hostable), PNG, PDF, CSV
+- 2026-02-15: Updated landing page: "Dashboards that think" hero heading, video background with dark overlay
 - 2026-02-15: Added AI report generation with dialog UI (copy/download support)
 - 2026-02-15: Added export functionality (PNG dashboard, PDF report, CSV data)
 - 2026-02-15: Integrated AI chat as split-pane alongside dashboard with pinned chart support
 - 2026-02-15: Added manual dashboard builder with column/chart selectors
-- 2026-02-15: Added dashboard layout selector (1-col/2-col/3-col)
 - 2026-02-15: Added chart type switcher (bar/line/pie/area/scatter) on each chart card
 - 2026-02-15: Built animated landing page with CSS floating orbs and smooth scroll sections
 - 2026-02-15: Added Zod validation and SQL security hardening

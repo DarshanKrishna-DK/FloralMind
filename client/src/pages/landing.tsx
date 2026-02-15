@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import logoWithText from "@assets/ChatGPT_Image_Feb_15,_2026,_11_16_42_AM_1771134475217.png";
+import heroVideo from "@assets/SaaS_Product_Demo_Video_Generation_1771140201051.mp4";
 
 function FloatingOrbs() {
   return (
@@ -124,9 +125,17 @@ export default function LandingPage() {
       </header>
 
       <section ref={heroRef} className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
-        <FloatingOrbs />
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover z-0"
+          src={heroVideo}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80 z-[1]" />
 
-        <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background z-[1]" />
+        <FloatingOrbs />
 
         <motion.div
           style={{ y, opacity }}
@@ -141,22 +150,21 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 mb-6"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-white/10 border border-white/20 backdrop-blur-sm mb-6"
             >
-              <Zap className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs font-medium text-primary">AI-Native Analytics Platform</span>
+              <Zap className="w-3.5 h-3.5 text-white" />
+              <span className="text-xs font-medium text-white">AI-Native Analytics Platform</span>
             </motion.div>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight mb-6">
-              Turn raw data into
-              <br />
-              <span className="bg-gradient-to-r from-[hsl(330,65%,45%)] to-[hsl(280,55%,50%)] bg-clip-text text-transparent">
-                thinking dashboards
-              </span>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight mb-4 text-white">
+              Dashboards that think
             </h1>
+            <p className="text-lg sm:text-xl text-white/80 font-medium mb-6">
+              Turn raw data into living, intelligent visualizations
+            </p>
 
-            <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
-              Upload any CSV and let AI generate interactive visualizations, uncover hidden patterns,
+            <p className="text-base sm:text-lg text-white/60 max-w-2xl mx-auto mb-8 leading-relaxed">
+              Upload any CSV and let AI generate interactive dashboards, uncover hidden patterns,
               and answer your questions through natural conversation. No coding required.
             </p>
 
@@ -172,6 +180,7 @@ export default function LandingPage() {
               <Button
                 variant="outline"
                 size="lg"
+                className="border-white/30 text-white bg-white/10 backdrop-blur-sm"
                 onClick={() => {
                   document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
                 }}
@@ -188,12 +197,12 @@ export default function LandingPage() {
           <motion.div
             animate={{ y: [0, 8, 0] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="w-6 h-10 rounded-md border-2 border-muted-foreground/30 flex items-start justify-center p-1.5"
+            className="w-6 h-10 rounded-md border-2 border-white/30 flex items-start justify-center p-1.5"
           >
             <motion.div
               animate={{ y: [0, 12, 0] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="w-1.5 h-1.5 rounded-sm bg-primary"
+              className="w-1.5 h-1.5 rounded-sm bg-white"
             />
           </motion.div>
         </div>
@@ -342,7 +351,8 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             <img src={logoWithText} alt="FloralMind" className="h-6 object-contain" />
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <span className="text-xs text-muted-foreground italic">Dashboards that think</span>
             <div className="flex items-center gap-1.5">
               <Shield className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">Secure & Private</span>
