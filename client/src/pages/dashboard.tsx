@@ -45,12 +45,12 @@ import { ManualChartBuilder } from "@/components/manual-chart-builder";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { Dataset, Message, ChartConfig, DashboardMetric, AIResponse, ColumnInfo } from "@shared/schema";
 import { motion } from "framer-motion";
-import { ResponsiveGridLayout as RGLComponent } from "react-grid-layout";
+import { ResponsiveGridLayout as RGLBase } from "react-grid-layout";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import logoIcon from "@assets/ChatGPT_Image_Feb_15,_2026,_11_17_44_AM_1771134475217.png";
+import logoIcon from "@assets/ChatGPT_Image_Feb_15,_2026,_11_17_44_AM_1771145176190.png";
 
-const ResponsiveGridLayout = RGLComponent as any;
+const ResponsiveGridLayout = RGLBase as any;
 
 interface GridLayout {
   i: string;
@@ -103,7 +103,9 @@ export default function DashboardPage() {
   const [columnData, setColumnData] = useState<Record<string, unknown>[]>([]);
   const [columnDataLoading, setColumnDataLoading] = useState(false);
   const [showAllColumns, setShowAllColumns] = useState(false);
+  const [gridWidth, setGridWidth] = useState(800);
   const dashboardRef = useRef<HTMLDivElement>(null);
+  const gridContainerRef = useRef<HTMLDivElement>(null);
 
   const { data: dataset, isLoading: datasetLoading } = useQuery<Dataset>({
     queryKey: ["/api/datasets", datasetId],
@@ -132,6 +134,19 @@ export default function DashboardPage() {
       setGridLayouts({ lg: layout, md: layout, sm: generateLayout(dashboardCharts.length, 1) });
     }
   }, [dashboardCharts.length, gridLayouts]);
+
+  useEffect(() => {
+    const el = gridContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setGridWidth(entry.contentRect.width);
+      }
+    });
+    ro.observe(el);
+    setGridWidth(el.clientWidth);
+    return () => ro.disconnect();
+  }, []);
 
   const handleLayoutChange = useCallback((_layout: any, allLayouts: any) => {
     setGridLayouts(allLayouts);
@@ -263,7 +278,7 @@ export default function DashboardPage() {
         sql: `SELECT "${columnName}" FROM data LIMIT 200`,
       });
       const data = await res.json();
-      setColumnData(data || []);
+      setColumnData(data.rows || []);
     } catch {
       setColumnData([]);
     } finally {
@@ -282,7 +297,7 @@ export default function DashboardPage() {
         sql: `SELECT * FROM data LIMIT 200`,
       });
       const data = await res.json();
-      setColumnData(data || []);
+      setColumnData(data.rows || []);
     } catch {
       setColumnData([]);
     } finally {
@@ -493,10 +508,10 @@ export default function DashboardPage() {
         <Sidebar>
           <SidebarContent>
             <SidebarGroup>
-              <div className="px-3 py-3">
+              <div className="px-3 py-3 bg-gradient-to-br from-pink-500/5 via-purple-500/5 to-indigo-500/5 dark:from-pink-500/10 dark:via-purple-500/10 dark:to-indigo-500/10 rounded-md mx-2">
                 <div className="flex items-center gap-2 mb-1">
                   <img src={logoIcon} alt="FloralMind" className="w-6 h-6" />
-                  <span className="text-sm font-semibold">FloralMind</span>
+                  <span className="text-sm font-semibold bg-gradient-to-r from-pink-600 to-purple-600 dark:from-pink-400 dark:to-purple-400 bg-clip-text text-transparent">FloralMind</span>
                 </div>
                 <span className="text-[10px] text-muted-foreground italic">Dashboards that think</span>
               </div>
@@ -584,11 +599,13 @@ export default function DashboardPage() {
         </Sidebar>
 
         <div className="flex flex-col flex-1 min-w-0">
-          <header className="flex items-center justify-between gap-2 px-4 py-2 border-b sticky top-0 z-50 bg-background">
+          <header className="sticky top-0 z-50 bg-background border-b">
+            <div className="h-[2px] w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500" />
+            <div className="flex items-center justify-between gap-2 px-4 py-2">
             <div className="flex items-center gap-2">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <h1 className="text-sm font-medium truncate">{dataset.name}</h1>
-              <Badge variant="secondary" className="text-[10px]">
+              <h1 className="text-sm font-semibold truncate">{dataset.name}</h1>
+              <Badge variant="secondary" className="text-[10px] bg-gradient-to-r from-pink-500/10 to-purple-500/10 dark:from-pink-500/20 dark:to-purple-500/20">
                 <GripVertical className="w-2.5 h-2.5 mr-0.5" />
                 Drag to rearrange
               </Badge>
@@ -645,6 +662,7 @@ export default function DashboardPage() {
               </Button>
               <ThemeToggle />
             </div>
+            </div>
           </header>
 
           <main className="flex-1 overflow-hidden flex">
@@ -684,20 +702,24 @@ export default function DashboardPage() {
                   )}
 
                   {dashboardMetrics.length > 0 && (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                      {dashboardMetrics.map((m, i) => (
-                        <MetricCard key={i} metric={m} />
-                      ))}
+                    <div className="p-3 rounded-md bg-gradient-to-r from-pink-500/5 via-transparent to-purple-500/5 dark:from-pink-500/10 dark:to-purple-500/10">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        {dashboardMetrics.map((m, i) => (
+                          <MetricCard key={i} metric={m} />
+                        ))}
+                      </div>
                     </div>
                   )}
 
                   {dashboardCharts.length > 0 ? (
+                    <div ref={gridContainerRef}>
                     <ResponsiveGridLayout
                       className="layout"
                       layouts={currentLayouts}
                       breakpoints={{ lg: 1200, md: 800, sm: 480 }}
                       cols={{ lg: 12, md: 12, sm: 12 }}
                       rowHeight={80}
+                      width={gridWidth}
                       onLayoutChange={handleLayoutChange}
                       draggableHandle=".drag-handle"
                       resizeHandles={["se"] as any}
@@ -705,13 +727,13 @@ export default function DashboardPage() {
                       containerPadding={[0, 0] as [number, number]}
                     >
                       {dashboardCharts.map((chart, i) => (
-                        <div key={String(i)} data-testid={`chart-grid-item-${i}`}>
-                          <Card className="h-full flex flex-col overflow-hidden relative group">
-                            <div className="drag-handle flex items-center gap-2 px-3 py-2 border-b cursor-grab active:cursor-grabbing">
+                        <div key={String(i)} data-testid={`chart-grid-item-${i}`} style={{ overflow: "visible" }}>
+                          <Card className="h-full flex flex-col overflow-visible relative group transition-shadow duration-200 hover:shadow-md">
+                            <div className="drag-handle flex items-center gap-2 px-3 py-2 border-b cursor-grab active:cursor-grabbing bg-gradient-to-r from-pink-500/5 to-purple-500/5 dark:from-pink-500/10 dark:to-purple-500/10">
                               <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
                               <span className="text-xs font-medium truncate flex-1">{chart.title}</span>
                             </div>
-                            <div className="flex-1 min-h-0">
+                            <div className="flex-1 min-h-0 overflow-hidden">
                               <ChartCard
                                 chart={chart}
                                 onSliceClick={handleSliceClick}
@@ -724,6 +746,7 @@ export default function DashboardPage() {
                         </div>
                       ))}
                     </ResponsiveGridLayout>
+                    </div>
                   ) : initialMode === "manual" && !showManualBuilder ? (
                     <Card className="p-8 text-center">
                       <LayoutGrid className="w-8 h-8 text-primary mx-auto mb-3" />
@@ -753,9 +776,9 @@ export default function DashboardPage() {
                   ) : null}
 
                   {suggestions.length > 0 && (
-                    <Card className="p-4">
+                    <Card className="p-4 bg-gradient-to-r from-pink-500/5 via-transparent to-purple-500/5 dark:from-pink-500/10 dark:to-purple-500/10">
                       <div className="flex items-center gap-2 mb-3">
-                        <Sparkles className="w-4 h-4 text-primary" />
+                        <Sparkles className="w-4 h-4 text-pink-500" />
                         <h3 className="text-sm font-medium">Suggested analyses</h3>
                       </div>
                       <div className="flex flex-wrap gap-2">
